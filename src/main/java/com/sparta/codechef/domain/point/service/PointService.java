@@ -12,5 +12,5 @@ import java.util.List;
 public class PointService {
 
     private final PointRepository pointRepository;
-    
+
 }

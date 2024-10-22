@@ -17,6 +17,7 @@ public class Comment extends Timestamped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -27,6 +28,13 @@ public class Comment extends Timestamped {
     @JoinColumn(name = "board_id")
     private Board board;
 
+    @Column(nullable = false)
+    private Boolean isAdopted = false;
+
+    public void update(String content)
+    {
+        this.content = content;
+    }
 
 
 }
