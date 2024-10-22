@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Builder
 @Getter
-public class ExceptionCauseDto {
+public class ExceptionCause {
     private HttpStatus httpStatus;
     private Integer statusCode;
     private String message;

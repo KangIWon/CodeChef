@@ -22,8 +22,8 @@ public enum ErrorStatus implements BaseCode {
     private final String message;
 
     @Override
-    public ExceptionCauseDto getCauseHttpStatus() {
-        return ExceptionCauseDto.builder()
+    public ExceptionCause getCauseHttpStatus() {
+        return ExceptionCause.builder()
                 .httpStatus(httpStatus)
                 .statusCode(statusCode)
                 .message(message)

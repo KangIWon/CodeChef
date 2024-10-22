@@ -1,7 +1,5 @@
-package com.sparta.codechef.domain.comment.entity;
+package com.sparta.codechef.domain.chat.entity;
 
-import com.sparta.codechef.common.Timestamped;
-import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,22 +9,23 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Comment extends Timestamped {
-
+public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String content;
+    private String message;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", nullable = false)
+    private ChatRoom chatRoom;
+
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "board_id")
-    private Board board;
-
-
-
+    @Builder
+    public Message(String message, ChatRoom chatRoom) {
+        this.message = message;
+        this.chatRoom = chatRoom;
+    }
 }
