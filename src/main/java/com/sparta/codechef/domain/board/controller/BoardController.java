@@ -1,10 +1,17 @@
 package com.sparta.codechef.domain.board.controller;
 
+import com.sparta.codechef.common.ApiResponse;
+import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
+import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
+import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
+import com.sparta.codechef.domain.board.dto.response.BoardResponse;
 import com.sparta.codechef.domain.board.service.BoardService;
+import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -12,5 +19,39 @@ import org.springframework.web.bind.annotation.RestController;
 public class BoardController {
 
     private final BoardService boardService;
+
+    @PostMapping// 게시판 생성
+    public ApiResponse createBoard(@RequestPart BoardCreatedRequest request,
+                                   AuthUser authUser) {
+        boardService.createBoard(request, authUser);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", null);
+    }
+
+    @GetMapping// 게시판 전체 조회
+    public ApiResponse<List<BoardResponse>> findAllBoard() {
+        return ApiResponse.ok("게시물 전체 조회 성공", boardService.findAllBoard());
+    }
+
+    @GetMapping("/{boardId}") // 게시판 단건 조회
+    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId,
+                                                     AuthUser authUser) {
+        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId, authUser));
+    }
+
+    @PutMapping("/{boardId}") // 게시물 수정
+    public ApiResponse modifiedBoard(@PathVariable Long boardId,
+                                     @RequestPart BoardModifiedRequest request,
+                                     AuthUser authUser) {
+        boardService.modifiedBoard(boardId, request, authUser);
+        return ApiResponse.onSuccess(boardId +"번 게시물 수정",null);
+    }
+
+    @DeleteMapping("/{boardId}") // 게시물 삭제
+    public ApiResponse deletedBoard(@PathVariable Long boardId,
+                                    @RequestParam Long userId,
+                                    AuthUser authUser) {
+        boardService.deletedBoard(boardId, authUser, userId);
+        return ApiResponse.onSuccess(boardId +"번 게시물 삭제",null);
+    }
 
 }

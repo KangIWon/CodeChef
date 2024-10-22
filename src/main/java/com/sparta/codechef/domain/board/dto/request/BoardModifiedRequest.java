@@ -5,12 +5,12 @@ import com.sparta.codechef.common.enums.Language;
 import lombok.Getter;
 
 @Getter
-public class BoardCreatedRequest {
+public class BoardModifiedRequest {
+
     public Long userId; // 나중에 지울 것
     public String title;
     public String contents;
     public Language language;
     public Framework framework;
-
 
 }
