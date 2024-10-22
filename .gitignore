@@ -31,7 +31,16 @@ out/
 /nbbuild/
 /dist/
 /nbdist/
-/.nb-gradle/
+/.nb-gradle/.gitignore
 
 ### VS Code ###
 .vscode/
+
+.env
+*.env
+.env*
+env.properties
+propertyConfig
+
+
+*.yml
