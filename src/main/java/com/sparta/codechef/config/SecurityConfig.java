@@ -1,7 +1,7 @@
 package com.sparta.codechef.config;
 
-import com.sparta.codechef.security.RoleFilter;
-import com.sparta.codechef.security.SecurityFilter;
+import com.sparta.codechef.common.enums.UserRole;
+import com.sparta.codechef.security.JwtSecurityFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,40 +14,33 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @RequiredArgsConstructor
-@EnableWebSecurity // Spring Security 지원을 가능하게 함
-@EnableMethodSecurity(securedEnabled = true) // @Secured 사용가능하게
-public class WebSecurityConfig {
+@EnableWebSecurity
+@EnableMethodSecurity(securedEnabled = true)
+public class SecurityConfig {
 
-    private final SecurityFilter securityFilter;
-    private final CorsConfigurationSource corsConfigurationSource;
-    private final RoleFilter roleFilter;
+    private final JwtSecurityFilter jwtSecurityFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // SessionManagementFilter, SecurityContextPersistenceFilter
                 )
-                .addFilterBefore(securityFilter, SecurityContextHolderAwareRequestFilter.class)
-                .addFilterAfter(roleFilter, SecurityContextHolderAwareRequestFilter.class)
+                .addFilterBefore(jwtSecurityFilter, SecurityContextHolderAwareRequestFilter.class)
                 .formLogin(AbstractHttpConfigurer::disable) // UsernamePasswordAuthenticationFilter, DefaultLoginPageGeneratingFilter 비활성화
                 .anonymous(AbstractHttpConfigurer::disable) // AnonymousAuthenticationFilter 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable) // BasicAuthenticationFilter 비활성화
                 .logout(AbstractHttpConfigurer::disable) // LogoutFilter 비활성화
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/**").permitAll()
-//                        .requestMatchers("/auth/signup", "/auth/login", "/auth/reissue", "/error").permitAll()
-                        .anyRequest().authenticated());
-
-        http.cors(c -> {
-            c.configurationSource(corsConfigurationSource);
-        });
-
-        return http.build();
+                        .requestMatchers("/auth/login", "/auth/signup").permitAll()
+                        .requestMatchers("/test").hasAuthority(UserRole.Authority.ADMIN)
+                        .anyRequest().authenticated()
+                )
+                .build();
     }
 
     @Bean

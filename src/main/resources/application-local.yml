@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -23,3 +25,6 @@ cloud.aws.s3:
     secret-key: ${S3_CREDENTIALS_SECRET_KEY}
     region: ${S3_credentials_REGION}
   bucket: ${S3_BUCKET}
+jwt:
+  secret:
+    key: ${JWT_SECRET_KEY}
