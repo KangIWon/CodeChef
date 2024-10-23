@@ -55,9 +55,9 @@ public class AuthController {
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "이메일 중복 확인", response);
     }
 
-//    @PatchMapping("/warning/{userId}")
-//    public ApiResponse<Void> addWarningAndSetBlock(@AuthenticationPrincipal AuthUser user, @PathVariable Long userId) {
-//        authService.addWarningAndSetBlock(user, userId);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "경고 추가 완료", null);
-//    }
+    @PatchMapping("/warning/{userId}")
+    public ApiResponse<Void> addWarningAndSetBlock(@AuthenticationPrincipal AuthUser user, @PathVariable Long userId) {
+        authService.addWarningAndSetBlock(user, userId);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "경고 추가 완료", null);
+    }
 }
