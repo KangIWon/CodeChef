@@ -31,16 +31,10 @@ public class AuthController {
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그인 성공", response);
     }
 
-    @PostMapping("/logout")
-    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
-        authService.logout(user);
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
-    }
-
-//    @PostMapping("/reissue")
-//    public ApiResponse<AuthResponse.Reissue> reissue(@RequestHeader(JwtUtil.REFRESH_TOKEN_HEADER) String refreshToken) {
-//        AuthResponse.Reissue response = authService.reissue(refreshToken);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "토큰 재발급 성공", response);
+//    @PostMapping("/logout")
+//    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
+//        authService.logout(user);
+//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
 //    }
 
     @PostMapping("/delete")
@@ -48,12 +42,6 @@ public class AuthController {
         authService.deleteUser(user, request);
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "회원 탈퇴 완료", null);
     }
-
-//    @PutMapping("/update")
-//    public ApiResponse<Void> updateUser(@AuthenticationPrincipal AuthUser user, @RequestBody AuthRequest.Update updateRequest) {
-//        authService.updateUser(user, updateRequest);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "회원 정보 수정 완료", null);
-//    }
 
     @PostMapping("/password/change")
     public ApiResponse<Void> changePassword(@AuthenticationPrincipal AuthUser user, @RequestBody AuthRequest.ChangePassword changePasswordRequest) {
@@ -67,9 +55,9 @@ public class AuthController {
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "이메일 중복 확인", response);
     }
 
-    @PatchMapping("/warning/{userId}")
-    public ApiResponse<Void> addWarningAndSetBlock(@AuthenticationPrincipal AuthUser user, @PathVariable Long userId) {
-        authService.addWarningAndSetBlock(user, userId);
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "경고 추가 완료", null);
-    }
+//    @PatchMapping("/warning/{userId}")
+//    public ApiResponse<Void> addWarningAndSetBlock(@AuthenticationPrincipal AuthUser user, @PathVariable Long userId) {
+//        authService.addWarningAndSetBlock(user, userId);
+//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "경고 추가 완료", null);
+//    }
 }

@@ -16,12 +16,6 @@ public class GlobalExceptionHandler {
         return getErrorResponse(status.getHttpStatus(), status.getMessage());
     }
 
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ApiResponse<String>> handleInvalidRequestException(ApiException ex) {
-        ExceptionCause status = ex.getErrorCode().getCauseHttpStatus();
-        return getErrorResponse(status.getHttpStatus(), status.getMessage());
-    }
-
     public ResponseEntity<ApiResponse<String>> getErrorResponse(HttpStatus status, String message) {
         return new ResponseEntity<>(ApiResponse.createError( status.value(), message), status);
     }

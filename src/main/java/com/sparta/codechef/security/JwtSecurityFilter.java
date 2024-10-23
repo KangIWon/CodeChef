@@ -9,6 +9,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,51 +22,47 @@ import java.io.IOException;
 @Slf4j(topic = "Jwt_Filter")
 @Component
 @RequiredArgsConstructor
-public class SecurityFilter extends OncePerRequestFilter {
+public class JwtSecurityFilter extends OncePerRequestFilter {
+
     private final JwtUtil jwtUtil;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        String requestURI = request.getRequestURI();
-        log.info("Request URI: {}", requestURI);
-        if(!requestURI.startsWith("/auth/logout") && requestURI.startsWith("/auth/")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String authorizationHeader = request.getHeader("Authorization");
+    protected void doFilterInternal(
+            HttpServletRequest httpRequest,
+            @NonNull HttpServletResponse httpResponse,
+            @NonNull FilterChain chain
+    ) throws ServletException, IOException {
+        String authorizationHeader = httpRequest.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String jwt = jwtUtil.substringToken(authorizationHeader);
-            try{
+            try {
                 Claims claims = jwtUtil.extractClaims(jwt);
-                String userId = claims.getSubject();
+                Long userId = Long.valueOf(claims.getSubject());
                 String email = claims.get("email", String.class);
                 UserRole userRole = UserRole.of(claims.get("userRole", String.class));
 
-                if(userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    AuthUser authUser = new AuthUser(Long.parseLong(userId), email, userRole);
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                    AuthUser authUser = new AuthUser(userId, email, userRole);
 
                     JwtAuthenticationToken authenticationToken = new JwtAuthenticationToken(authUser);
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpRequest));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             } catch (SecurityException | MalformedJwtException e) {
                 log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.", e);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않는 JWT 서명입니다.");
+                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않는 JWT 서명입니다.");
             } catch (ExpiredJwtException e) {
                 log.error("Expired JWT token, 만료된 JWT token 입니다.", e);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "만료된 JWT 토큰입니다.");
+                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "만료된 JWT 토큰입니다.");
             } catch (UnsupportedJwtException e) {
                 log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.", e);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "지원되지 않는 JWT 토큰입니다.");
+                httpResponse.sendError(HttpServletResponse.SC_BAD_REQUEST, "지원되지 않는 JWT 토큰입니다.");
             } catch (Exception e) {
                 log.error("Internal server error", e);
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                httpResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         }
-
-        filterChain.doFilter(request, response);
+        chain.doFilter(httpRequest, httpResponse);
     }
 }
