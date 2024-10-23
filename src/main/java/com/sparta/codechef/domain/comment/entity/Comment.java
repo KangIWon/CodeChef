@@ -28,12 +28,18 @@ public class Comment extends Timestamped {
     @JoinColumn(name = "board_id")
     private Board board;
 
-    @Column(nullable = false)
+    @Builder.Default
     private Boolean isAdopted = false;
 
     public void update(String content)
     {
         this.content = content;
+    }
+    public void isAdopted(Boolean isAdopted)
+    {
+        if(isAdopted == false)
+            this.isAdopted = true;
+
     }
 
 

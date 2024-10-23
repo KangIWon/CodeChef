@@ -17,6 +17,7 @@ import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
@@ -53,7 +54,7 @@ public class CommentService {
     public CommentUpdateResponse updateComment(AuthUser authUser, Long boardId, Long commentId, CommentRequest commentRequest) {
         Board board = boardRepository.findById(boardId).orElse(null);
 
-        Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
+        Comment comment = commentRepository.findByIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
                 -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
         comment.update(commentRequest.getComment());
         commentRepository.save(comment);
@@ -62,7 +63,7 @@ public class CommentService {
 
     public Void deleteComment(AuthUser authUser, Long boardId, Long commentId){
         Board board = boardRepository.findById(boardId).orElse(null);
-        Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
+        Comment comment = commentRepository.findByIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
                 -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
         if(authUser.getUserId().equals(comment.getUser().getId()))
         {
@@ -73,4 +74,13 @@ public class CommentService {
     }
 
 
+    public Void adoptedComment(AuthUser authUser, Long boardId, Long commentId){
+        Board board = boardRepository.findById(boardId).orElse(null);
+        Comment comment = commentRepository.findByIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
+                -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
+        comment.isAdopted(comment.getIsAdopted());
+        commentRepository.save(comment);
+
+        return null;
+    }
 }
