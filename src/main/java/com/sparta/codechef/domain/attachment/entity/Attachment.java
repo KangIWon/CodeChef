@@ -12,6 +12,7 @@ public class Attachment {
     private Long id;
     private String s3Url;
     private String s3Key;
+    private boolean isDeleted;
 
 
     @ManyToOne(fetch = FetchType.LAZY)

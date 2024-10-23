@@ -13,7 +13,7 @@ public class ApiResponse<T> {
     private final T data;
     private final LocalDateTime timestamp = LocalDateTime.now();
 
-    private ApiResponse(Integer statusCode, String message, T data) {
+    public ApiResponse(Integer statusCode, String message, T data) {
         this.statusCode = statusCode;
         this.message = message;
         this.data = data;
