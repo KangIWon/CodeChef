@@ -7,7 +7,6 @@ import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import com.sparta.codechef.domain.chat.entity.Message;
 import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
 import com.sparta.codechef.domain.chat.repository.message.MessageRepository;
-import com.sparta.codechef.domain.user.dto.response.UserResponse;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +53,8 @@ public class MessageService {
         return new MessageResponse(
                 savedMessage.getId(),
                 savedMessage.getMessage(),
-                new UserResponse(user.getId(), user.getEmail()),
+                user.getId(),
+                user.getEmail(),
                 savedMessage.getCreatedAt()
                 );
     }

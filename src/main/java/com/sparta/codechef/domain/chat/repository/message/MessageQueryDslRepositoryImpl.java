@@ -1,10 +1,8 @@
 package com.sparta.codechef.domain.chat.repository.message;
 
-import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sparta.codechef.domain.chat.dto.response.MessageResponse;
-import com.sparta.codechef.domain.chat.entity.Message;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
