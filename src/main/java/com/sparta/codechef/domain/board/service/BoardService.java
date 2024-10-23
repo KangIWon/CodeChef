@@ -9,11 +9,14 @@ import com.sparta.codechef.domain.board.dto.response.BoardResponse;
 import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.domain.comment.dto.CommentResponse;
-import com.sparta.codechef.domain.comment.repository.CommentRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.engine.jdbc.Size;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,15 +50,15 @@ public class BoardService {
         return null;
     }
 
-    public List<BoardResponse> findAllBoard() {
+    public Page<BoardResponse> findAllBoard(int page, int size) {
+        Pageable pageable = PageRequest.of(page-1, size);
         // Board 엔티티를 BoardResponse로 변환
-        return boardRepository.findAll().stream()
+        return boardRepository.findAll(pageable)
                 .map(board -> new BoardResponse(board.getId(), board.getUser().getId(),
                         board.getTitle(),
                         board.getContents(),
                         board.getLanguage().toString(),
-                        board.getFramework()))
-                .collect(Collectors.toList());  // 결과를 List로 반환
+                        board.getFramework()));  // 결과를 List로 반환
     }
 
     public BoardDetailResponse getBoard(Long boardId, AuthUser authUser) {
@@ -87,7 +90,7 @@ public class BoardService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        if (board.equals(request.userId)) // authUser.getUserId 로 변경 해야 됨
+        if (!board.getUser().getId().equals(request.userId)) // authUser.getUserId 로 변경 해야 됨
             throw new ApiException(ErrorStatus.NOT_THE_AUTHOR);
 
         board.BoardModify(
@@ -106,11 +109,42 @@ public class BoardService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        if (board.equals(userId)) // authUser.getUserId 로 변경 해야 됨
+        if (!board.getUser().getId().equals(userId)) // authUser.getUserId 로 변경 해야 됨
             throw new ApiException(ErrorStatus.NOT_THE_AUTHOR);
 
         boardRepository.deleteById(boardId);
 
         return null;
+    }
+
+    public Page<BoardResponse> boardSearch(String title, String content, int page, int size) {
+        Pageable pageable = PageRequest.of(page-1, size);
+        Page<Board> boards = boardRepository.boardSearch(title, content, pageable);
+
+
+        return boards.map(board -> new BoardResponse(
+                board.getId(),
+                board.getUser().getId(),
+                board.getTitle(),
+                board.getContents(),
+                board.getLanguage().toString(),
+                board.getFramework()));
+    }
+
+    public Page<BoardResponse> myCreatedBoard(AuthUser authUser, Long userId,int page, int size) {
+
+        Pageable pageable = PageRequest.of(page-1, size);
+        Page<Board> allById = boardRepository.findAllByUserId(userId, pageable).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
+        );
+
+
+        return allById.map(board -> new BoardResponse(
+                board.getId(),
+                board.getUser().getId(),
+                board.getTitle(),
+                board.getContents(),
+                board.getLanguage().toString(),
+                board.getFramework()));
     }
 }

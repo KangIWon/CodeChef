@@ -1,9 +1,10 @@
 package com.sparta.codechef.domain.comment.repository;
 
 import com.sparta.codechef.domain.comment.entity.Comment;
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,7 +18,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
     Optional<Comment> findByCommentIdAndUserIdAndBoardId(@Param("commentId") Long commentId,
                                                          @Param("userId") Long userId,
                                                          @Param("boardId") Long boardId);
-    Optional<Comment> findByIdAndUserIdAndBoardId(Long id,Long userId, Long boardId);
+
 
     Optional<List<Comment>> findAllByUserId(Long userId);
 }

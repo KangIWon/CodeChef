@@ -2,7 +2,12 @@ package com.sparta.codechef.domain.user.entity;
 
 import com.sparta.codechef.domain.framework.entity.Framework;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@Entity
+@NoArgsConstructor
 public class UserFramework {
 
 

@@ -23,17 +23,17 @@ public class BoardResponse {
 
 
     public BoardResponse(Long id,
-                         Long userId,
-                         String title,
-                         String content,
-                         String language,
-                         Framework framework) {
-        this.id = id;
-        this.userId = userId;
-        this.title = title;
-        this.content = content;
-        this.language = language;
-        this.framework = framework;
+                Long userId,
+                String title,
+                String content,
+                String language,
+                Framework framework) {
+            this.id = id;
+            this.userId = userId;
+            this.title = title;
+            this.content = content;
+            this.language = language;
+            this.framework = framework;
     }
 
 }
