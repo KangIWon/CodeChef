@@ -58,6 +58,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.webjars:stomp-websocket:2.3.3' // STOMP 클라이언트
 
+    //aws
+    implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+
 }
 
 tasks.named('test') {
