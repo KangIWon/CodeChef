@@ -1,16 +1,13 @@
 package com.sparta.codechef.domain.user.entity;
 
 import com.sparta.codechef.common.Timestamped;
-import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Organization;
 import com.sparta.codechef.common.enums.UserRole;
-import com.sparta.codechef.common.enums.Language;
 import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-
 
 @Getter
 @Entity
