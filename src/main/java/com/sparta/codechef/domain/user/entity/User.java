@@ -5,6 +5,7 @@ import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Organization;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.enums.Language;
+import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import com.sparta.codechef.domain.point.entity.Point;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,14 +46,22 @@ public class User extends Timestamped {
     @Column(nullable = false)
     private Integer warning;
 
-    @Column(nullable = false)
+    @Builder.Default
     private Boolean isDeleted = false;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "point_id")
     private Point point;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
+
     public void isDelete() {
         isDeleted = true;
+    }
+
+    public void updateChatRoom(ChatRoom chatRoom) {
+        this.chatRoom = chatRoom;
     }
 }

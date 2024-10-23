@@ -7,9 +7,9 @@ public class ChatRoomRequest {
 
     private final String title;
     private final String password;
-    private final int maxParticipants;
+    private final Integer maxParticipants;
 
-    public ChatRoomRequest(String title, String password, int maxParticipants) {
+    public ChatRoomRequest(String title, String password, Integer maxParticipants) {
         this.title = title;
         this.password = password;
         this.maxParticipants = maxParticipants;

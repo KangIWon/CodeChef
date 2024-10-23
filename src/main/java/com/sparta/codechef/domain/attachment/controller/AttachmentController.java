@@ -4,7 +4,6 @@ import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
 import com.sparta.codechef.domain.attachment.service.AttachmentService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +24,7 @@ public class AttachmentController {
      */
     @PostMapping
     public ApiResponse<List<AttachmentResponse>> uploadFiles(@RequestPart(name = "file") List<MultipartFile> file) {
-        return new ApiResponse<>(HttpStatus.OK.value(),
+        return ApiResponse.ok(
                 "첨부파일이 추가되었습니다.",
                 this.attachmentService.uploadFiles(file)
         );
@@ -39,7 +38,7 @@ public class AttachmentController {
      */
     @GetMapping
     public ApiResponse<List<AttachmentResponse>> getFiles(@RequestBody Long boardId) {
-        return new ApiResponse<>(HttpStatus.OK.value(),
+        return ApiResponse.ok(
                 "첨부파일 목록 전체가 조회되었습니다.",
                 this.attachmentService.getFiles(boardId)
         );
@@ -57,7 +56,7 @@ public class AttachmentController {
             @RequestBody Long boardId,
             @RequestPart(name = "file") List<MultipartFile> file
     ) {
-        return new ApiResponse<>(HttpStatus.OK.value(),
+        return ApiResponse.ok(
                 "첨부파일이 수정되었습니다.",
                 this.attachmentService.updateFiles(boardId, file)
         );

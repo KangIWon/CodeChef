@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class ChatRoomQueryDslRepositoryImpl implements ChatRoomQueryDslRepository {
     private final JPAQueryFactory jpaQueryFactory;
+
 }

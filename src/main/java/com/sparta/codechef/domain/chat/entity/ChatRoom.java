@@ -1,17 +1,19 @@
 package com.sparta.codechef.domain.chat.entity;
 
+import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.sparta.codechef.domain.user.entity.User;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
 
 
 @Getter
 @Entity
 @NoArgsConstructor
-@Builder
+@Builder(builderClassName = "ChatRoomBuilder")
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChatRoom {
 
@@ -22,15 +24,11 @@ public class ChatRoom {
     private String password;
     private int maxParticipants;
 
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user; // 방장
 
-    @Builder
-    public ChatRoom(String title, String password, int maxParticipants) {
-        this.title = title;
-        this.password = password;
-        this.maxParticipants = maxParticipants;
-    }
-
-    public void updateRoomInfo(String title, String password, int maxParticipants) {
+    public void updateRoomInfo(String title, String password, Integer maxParticipants) {
         if (title != null && !title.isEmpty()) {
             this.title = title;
         }
@@ -39,10 +37,18 @@ public class ChatRoom {
             this.password = password;
         }
 
-        if (maxParticipants <= 100 & maxParticipants > 1) {
+        if (maxParticipants != null) {
+            if (maxParticipants < 2 || maxParticipants > 100) {
+                throw new ApiException(ErrorStatus.BAD_REQUEST_MAX_PARTICIPANTS);
+            }
+
             this.maxParticipants = maxParticipants;
         }
     }
 
-
+    public static class ChatRoomBuilder {
+        public ChatRoomBuilder id(Long id) {
+            throw new ApiException(ErrorStatus.ID_CANNOT_BE_SET);
+        }
+    }
 }

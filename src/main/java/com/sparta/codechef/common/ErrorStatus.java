@@ -18,10 +18,23 @@ public enum ErrorStatus implements BaseCode {
 
     // 유저 관련 예외
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, 401, "인증되지 않은 유저입니다."),
+    NOT_FOUND_USER(HttpStatus.NOT_FOUND, 404, "유저를 찾을 수 없습니다."),
 
     // 댓글 관련 예외
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND,404,"댓글을 찾지 못했습니다"),
-    NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다");
+    NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다"),
+    EXAMPLE_ERROR(HttpStatus.BAD_REQUEST, 400, "ErrorStatus 예시"),
+
+    // 빌더 관련 예외
+    ID_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "ID 필드는 설정할 수 없습니다."),
+    CREATED_AT_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "createdAt 필드는 설정할 수 없습니다."),
+
+    // 채팅방 관련 예외
+    BAD_REQUEST_MAX_PARTICIPANTS(HttpStatus.BAD_REQUEST, 400, "채팅방 정원은 최소 2명, 최대 100명입니다."),
+    NOT_FOUND_CHATROOM(HttpStatus.NOT_FOUND, 404, "채팅방을 찾을 수 없습니다."),
+    ALREADY_IN_CHATROOM(HttpStatus.CONFLICT, 409, "이미 채팅방에 접속해 있습니다."),
+    ROOM_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, 409, "채팅방 정원이 초과되었습니다."),
+    NOT_IN_CHATROOM(HttpStatus.CONFLICT, 409, "현재 채팅방에 접속해 있지 않습니다.");
 
 
 

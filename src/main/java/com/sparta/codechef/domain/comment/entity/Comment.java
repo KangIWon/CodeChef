@@ -28,7 +28,7 @@ public class Comment extends Timestamped {
     @JoinColumn(name = "board_id")
     private Board board;
 
-    @Column(nullable = false)
+    @Builder.Default
     private Boolean isAdopted = false;
 
     public void update(String content)
