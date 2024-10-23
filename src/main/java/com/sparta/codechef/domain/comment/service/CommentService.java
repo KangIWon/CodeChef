@@ -23,12 +23,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CommentService {
 
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
 
+    @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
         User user = userRepository.findById(authUser.getUserId()).orElse(null);
         Board board = boardRepository.findById(boardId).orElse(null);
@@ -53,14 +55,17 @@ public class CommentService {
     @Transactional
     public CommentUpdateResponse updateComment(AuthUser authUser, Long boardId, Long commentId, CommentRequest commentRequest) {
         Board board = boardRepository.findById(boardId).orElse(null);
+        System.out.println("board = " + board);
 
         Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
                 -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
+        System.out.println("comment = " + comment);
         comment.update(commentRequest.getComment());
         commentRepository.save(comment);
         return new CommentUpdateResponse(comment.getContent());
     }
 
+    @Transactional
     public Void deleteComment(AuthUser authUser, Long boardId, Long commentId){
         Board board = boardRepository.findById(boardId).orElse(null);
         Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
@@ -68,12 +73,13 @@ public class CommentService {
         if(authUser.getUserId().equals(comment.getUser().getId()))
         {
             commentRepository.delete(comment);
-            throw new ApiException(ErrorStatus.EXAMPLE_ERROR);
+//            throw new ApiException(ErrorStatus.EXAMPLE_ERROR);
         }
         return null;
     }
 
 
+    @Transactional
     public Void adoptedComment(AuthUser authUser, Long boardId, Long commentId){
         Board board = boardRepository.findById(boardId).orElse(null);
         Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()

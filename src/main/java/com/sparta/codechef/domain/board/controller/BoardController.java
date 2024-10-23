@@ -10,6 +10,7 @@ import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class BoardController {
 
     @PostMapping// 게시판 생성
     public ApiResponse createBoard(@RequestPart BoardCreatedRequest request,
-                                   AuthUser authUser) {
+                                   @AuthenticationPrincipal AuthUser authUser) {
 
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", boardService.createBoard(request, authUser));
     }
@@ -35,31 +36,28 @@ public class BoardController {
     }
 
     @GetMapping("/{boardId}") // 게시판 단건 조회
-    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId,
-                                                     AuthUser authUser) {
-        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId, authUser));
+    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId) {
+        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId));
     }
 
-    @GetMapping ("/myboard/{userId}")// 자기 게시물만 보기
-    public ApiResponse<Page<BoardResponse>> myCreatedBoard(AuthUser authUser,
-                                                           @PathVariable Long userId,
+    @GetMapping ("/myboard")// 자기 게시물만 보기
+    public ApiResponse<Page<BoardResponse>> myCreatedBoard(@AuthenticationPrincipal AuthUser authUser,
                                                            @RequestParam(defaultValue = "1") int page,
                                                            @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.onSuccess("", boardService.myCreatedBoard(authUser, userId, page, size));
+        return ApiResponse.onSuccess("", boardService.myCreatedBoard(authUser, page, size));
     }
 
     @PutMapping("/{boardId}") // 게시물 수정
     public ApiResponse modifiedBoard(@PathVariable Long boardId,
                                      @RequestPart BoardModifiedRequest request,
-                                     AuthUser authUser) {
+                                     @AuthenticationPrincipal AuthUser authUser) {
         return ApiResponse.onSuccess(boardId +"번 게시물 수정",boardService.modifiedBoard(boardId, request, authUser));
     }
 
     @DeleteMapping("/{boardId}") // 게시물 삭제
     public ApiResponse deletedBoard(@PathVariable Long boardId,
-                                    @RequestParam Long userId,
-                                    AuthUser authUser) {
-        return ApiResponse.onSuccess(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser, userId));
+                                    @AuthenticationPrincipal AuthUser authUser) {
+        return ApiResponse.onSuccess(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser));
     }
 
     @GetMapping("/search") // 게시물 제목, 내용으로 검색

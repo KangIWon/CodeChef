@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.board.service;
 
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
@@ -34,7 +35,7 @@ public class BoardService {
     @Transactional
     public Void createBoard(BoardCreatedRequest request, AuthUser authUser) {
 
-        User savedUsers = userRepository.findById(request.getUserId()).orElseThrow( // userId는 나중에 authUser.getUserId로 변경
+        User savedUsers = userRepository.findById(authUser.getUserId()).orElseThrow( // userId는 나중에 authUser.getUserId로 변경
                     () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
                 );
 
@@ -61,7 +62,7 @@ public class BoardService {
                         board.getFramework()));  // 결과를 List로 반환
     }
 
-    public BoardDetailResponse getBoard(Long boardId, AuthUser authUser) {
+    public BoardDetailResponse getBoard(Long boardId) {
 
         Board savedBoard = boardRepository.findById(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
@@ -86,11 +87,11 @@ public class BoardService {
     @Transactional
     public Void modifiedBoard(Long boardId, BoardModifiedRequest request, AuthUser authUser) {
 
-        Board board = boardRepository.findById(boardId).orElseThrow( //
+        Board board = boardRepository.findById(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
-
-        if (!board.getUser().getId().equals(request.userId)) // authUser.getUserId 로 변경 해야 됨
+        System.out.println("authUser = " + authUser.getAuthorities());
+        if (!board.getUser().getId().equals(authUser.getUserId()) && !authUser.getAuthorities().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.NOT_THE_AUTHOR);
 
         board.BoardModify(
@@ -104,12 +105,12 @@ public class BoardService {
     }
 
     @Transactional
-    public Void deletedBoard(Long boardId, AuthUser authUser, Long userId) {
+    public Void deletedBoard(Long boardId, AuthUser authUser) {
         Board board = boardRepository.findById(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        if (!board.getUser().getId().equals(userId)) // authUser.getUserId 로 변경 해야 됨
+        if (!board.getUser().getId().equals(authUser.getUserId()) && !authUser.getAuthorities().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.NOT_THE_AUTHOR);
 
         boardRepository.deleteById(boardId);
@@ -131,10 +132,10 @@ public class BoardService {
                 board.getFramework()));
     }
 
-    public Page<BoardResponse> myCreatedBoard(AuthUser authUser, Long userId,int page, int size) {
+    public Page<BoardResponse> myCreatedBoard(AuthUser authUser,int page, int size) {
 
         Pageable pageable = PageRequest.of(page-1, size);
-        Page<Board> allById = boardRepository.findAllByUserId(userId, pageable).orElseThrow(
+        Page<Board> allById = boardRepository.findAllByUserId(authUser.getUserId(), pageable).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
         );
 

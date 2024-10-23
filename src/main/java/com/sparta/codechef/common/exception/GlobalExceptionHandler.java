@@ -16,8 +16,6 @@ public class GlobalExceptionHandler {
         return getErrorResponse(status.getHttpStatus(), status.getMessage());
     }
 
-
-
     public ResponseEntity<ApiResponse<String>> getErrorResponse(HttpStatus status, String message) {
         return new ResponseEntity<>(ApiResponse.createError( status.value(), message), status);
     }

@@ -6,7 +6,6 @@ import lombok.Getter;
 
 @Getter
 public class BoardCreatedRequest {
-    public Long userId; // 나중에 지울 것
     public String title;
     public String contents;
     public Language language;
