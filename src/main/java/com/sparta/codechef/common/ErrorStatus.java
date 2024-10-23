@@ -22,7 +22,8 @@ public enum ErrorStatus implements BaseCode {
     NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다"),
     USER_DELETED(HttpStatus.BAD_REQUEST,400,"탈퇴된 유저입니다."),
     INVALID_CREDENTIALS(HttpStatus.BAD_REQUEST,400,"잘못된 비밀번호 입니다."),
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다.");
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
+    NOT_FOUND_FRAMEWORK(HttpStatus.NOT_FOUND, 404, "프레임워크를 찾지 못했습니다.");
 
 
 
