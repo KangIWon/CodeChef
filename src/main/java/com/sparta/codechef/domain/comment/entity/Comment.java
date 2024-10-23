@@ -35,6 +35,12 @@ public class Comment extends Timestamped {
     {
         this.content = content;
     }
+    public void isAdopted(Boolean isAdopted)
+    {
+        if(isAdopted == false)
+            this.isAdopted = true;
+
+    }
 
 
 }

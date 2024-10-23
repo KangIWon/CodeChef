@@ -14,6 +14,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long>, Comment
     Optional<Comment> findByUserIdAndBoardId(Long userId, Long boardId);
     @Query("SELECT c FROM Comment c WHERE c.id = :commentId AND c.user.id = :userId AND c.board.id = :boardId")
     Optional<Comment> findByCommentIdAndUserIdAndBoardId(Long commentId,Long userId, Long boardId);
+    Optional<Comment> findByIdAndUserIdAndBoardId(Long id,Long userId, Long boardId);
 
     Optional<List<Comment>> findAllByUserId(Long userId);
 }

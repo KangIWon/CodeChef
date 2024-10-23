@@ -41,6 +41,11 @@ public class CommentController {
     {
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "댓글이 삭제되었습니다.", commentService.deleteComment(authUser, boardId, commentId));
     }
+    @PatchMapping("/boards/{boardId}/comments/{commentId}")
+    public ApiResponse adoptedComment(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long boardId, @PathVariable Long commentId)
+    {
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "댓글을 채택했습니다.", commentService.adoptedComment(authUser,boardId,commentId));
+    }
 
 
 
