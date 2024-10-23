@@ -32,7 +32,7 @@ public class UserFrameworkController {
     @PatchMapping("users/frameworks")
     public ApiResponse updateUserFramework(@AuthenticationPrincipal AuthUser authUser, List<FrameworkRequest> frameworkRequestList)
     {
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "유저 프레임워크 수정에 성공했습니다.", userFrameworkService.updateUserFramework(authUser, frameworkRequestList));
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "유저 프레임워크 수정에 성공했습니다.", userFrameworkService.updateUserFramework(authUser,frameworkRequestList));
     }
 
 
