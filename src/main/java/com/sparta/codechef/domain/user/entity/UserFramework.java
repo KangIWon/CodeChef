@@ -22,4 +22,14 @@ public class UserFramework {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "framework_id")
     private Framework framework;
+
+    public UserFramework(User user, Framework framework)
+    {
+        this.user = user;
+        this.framework = framework;
+    }
+    public void update(Framework framework)
+    {
+        this.framework = framework;
+    }
 }
