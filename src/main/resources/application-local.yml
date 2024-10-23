@@ -22,6 +22,7 @@ spring:
 jwt:
   secret:
     key: ${JWT_SECRET_KEY}
+
 s3:
   credentials:
     access-key: ${S3_CREDENTIALS_ACCESS_KEY}

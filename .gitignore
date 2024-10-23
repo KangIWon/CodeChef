@@ -41,11 +41,11 @@ out/
 .env*
 env.properties
 propertyConfig
+docker-compose.yml
 
 # Ignore Docker-related files
 *.log
 .dockerignore
-docker-compose.yml
 docker-compose.override.yml
 Dockerfile
 
