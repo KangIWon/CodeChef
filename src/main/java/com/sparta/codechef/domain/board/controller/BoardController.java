@@ -23,8 +23,8 @@ public class BoardController {
     @PostMapping// 게시판 생성
     public ApiResponse createBoard(@RequestPart BoardCreatedRequest request,
                                    AuthUser authUser) {
-        boardService.createBoard(request, authUser);
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", null);
+
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", boardService.createBoard(request, authUser));
     }
 
     @GetMapping// 게시판 전체 조회
@@ -42,16 +42,14 @@ public class BoardController {
     public ApiResponse modifiedBoard(@PathVariable Long boardId,
                                      @RequestPart BoardModifiedRequest request,
                                      AuthUser authUser) {
-        boardService.modifiedBoard(boardId, request, authUser);
-        return ApiResponse.onSuccess(boardId +"번 게시물 수정",null);
+        return ApiResponse.onSuccess(boardId +"번 게시물 수정",boardService.modifiedBoard(boardId, request, authUser));
     }
 
     @DeleteMapping("/{boardId}") // 게시물 삭제
     public ApiResponse deletedBoard(@PathVariable Long boardId,
                                     @RequestParam Long userId,
                                     AuthUser authUser) {
-        boardService.deletedBoard(boardId, authUser, userId);
-        return ApiResponse.onSuccess(boardId +"번 게시물 삭제",null);
+        return ApiResponse.onSuccess(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser, userId));
     }
 
 }

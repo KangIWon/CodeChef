@@ -6,11 +6,12 @@ import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.comment.dto.CommentResponse;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Getter
-@Builder
+@NoArgsConstructor
 public class BoardResponse {
 
     private Long id;

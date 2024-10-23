@@ -18,7 +18,13 @@ public enum ErrorStatus implements BaseCode {
     EXAMPLE_ERROR(HttpStatus.BAD_REQUEST, 400, "ApiException 예외 처리 예시"),
     NOT_FOUND_USER(HttpStatus.BAD_REQUEST,400,"해당 유저를 찾을 수 없습니다."),
     NOT_FOUND_BOARD(HttpStatus.BAD_REQUEST,400,"해당 게시물을 찾을 수 없습니다."),
-    NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다.");
+    NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
+    NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND,404,"댓글을 찾지 못했습니다"),
+    NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다");
+
+
+
+
     private final HttpStatus httpStatus;
     private final Integer statusCode;
     private final String message;
