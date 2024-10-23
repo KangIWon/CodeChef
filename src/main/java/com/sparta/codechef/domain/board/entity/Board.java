@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.board.entity;
 import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Language;
+import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
 
 import lombok.*;
@@ -19,8 +20,9 @@ public class Board extends Timestamped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")
-    private Long user_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;

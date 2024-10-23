@@ -2,7 +2,13 @@ package com.sparta.codechef.domain.user.entity;
 
 import com.sparta.codechef.domain.language.entity.Language;
 import jakarta.persistence.*;
+import lombok.*;
 
+@Getter
+@Entity
+@NoArgsConstructor
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserLanguage {
 
     @Id
