@@ -5,6 +5,7 @@ import com.sparta.codechef.common.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,98 +38,118 @@ public class JwtUtil {
 
     private SecretKey key;
 
-//    @PostConstruct
-//    private void init() {
-//        // 키 설정
-//        key = getSecretKeyFromBase64(secretKey);
-//    }
+    @PostConstruct
+    private void init() {
+        // 키 설정
+        key = getSecretKeyFromBase64(secretKey);
+    }
 
     public void addTokenToHeader(HttpServletResponse response, String token) {
-        token = URLEncoder.encode(token, StandardCharsets.UTF_8)
-                .replaceAll("\\+", "%20");
-
-        response.addHeader(AUTHORIZATION_HEADER, token);
+        try {
+            token = URLEncoder.encode(token, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+            response.addHeader(AUTHORIZATION_HEADER, token);
+        } catch (Exception e) {
+            log.error("Failed to encode token", e);
+        }
     }
 
     public boolean canSubstringToken(String token) {
-        if (StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX)) {
-            return true;
-        }
-
-        return false;
+        return StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX);
     }
+
     public String substringToken(String token) {
-        if (StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX)) {
+        if (canSubstringToken(token)) {
             return token.substring(BEARER_PREFIX.length());
         }
 
         log.error("Not Found Token");
-        throw new NullPointerException("Not Found Token");
+        throw new IllegalArgumentException("Not Found Token");
     }
 
-//    public String getUserId(String token) {
-//        return getJwtParser().parseSignedClaims(token)
-//                .getPayload().getSubject();
-//    }
-//
-//    public String getRole(String token) {
-//
-//        return getJwtParser().parseSignedClaims(token)
-//                .getPayload()
-//                .get(AUTHORIZATION_KEY, String.class);
-//    }
-//
-//    public boolean isExpired(String token) {
-//        return getJwtParser().parseSignedClaims(token)
-//                .getPayload()
-//                .getExpiration()
-//                .before(new Date());
-//    }
-//
-//    private JwtParser getJwtParser() {
-//        return Jwts.parser()
-//                .verifyWith(key)
-//                .build();
-//    }
-//
-//    private SecretKey getSecretKeyFromBase64(String base64) {
-//        return Keys.hmacShaKeyFor(Base64Coder.decode(base64));
-//    }
-//
-//    public String getCategory(String token) {
-//        return getJwtParser().parseSignedClaims(token)
-//                .getPayload()
-//                .get("category", String.class);
-//    }
-//
-//
-//    public String createAccessToken(Long userId, String email, UserRole role) {
-//        Date now = new Date();
-//        return BEARER_PREFIX + Jwts.builder()
-//                .claim("category", TokenType.ACCESS.name())
-//                .expiration(new Date(now.getTime() + TokenType.ACCESS.getLifeTime()))
-//                .subject(String.valueOf(userId))
-//                .claim("email", email)
-//                .claim("userRole", role.getUserRole())
-//                .issuedAt(now)
-//                .signWith(key)
-//                .compact();
-//    }
-//
-//    public String createRefreshToken(Long userId, String email,  UserRole role) {
-//        Date now = new Date();
-//        return BEARER_PREFIX + Jwts.builder()
-//                .claim("category", TokenType.REFRESH.name())
-//                .expiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
-//                .subject(String.valueOf(userId))
-//                .claim("email", email)
-//                .claim("userRole", role.getUserRole())
-//                .issuedAt(now)
-//                .signWith(key)
-//                .compact();
-//    }
-//
-//    public Claims extractClaims(String token) {
-//        return getJwtParser().parseSignedClaims(token).getPayload();
-//    }
+    public String getUserId(String token) {
+        try {
+            return extractClaims(token).getSubject();
+        } catch (Exception e) {
+            log.error("Failed to extract user ID", e);
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    public String getRole(String token) {
+        try {
+            return extractClaims(token).get(AUTHORIZATION_KEY, String.class);
+        } catch (Exception e) {
+            log.error("Failed to extract role", e);
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    public boolean isExpired(String token) {
+        try {
+            Date expiration = extractClaims(token).getExpiration();
+            return expiration.before(new Date());
+        } catch (Exception e) {
+            log.error("Failed to check token expiration", e);
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    private JwtParser getJwtParser() {
+        return Jwts.parserBuilder().setSigningKey(key).build();
+    }
+
+    private SecretKey getSecretKeyFromBase64(String base64) {
+        try {
+            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64));
+        } catch (Exception e) {
+            log.error("Failed to decode secret key", e);
+            throw new IllegalArgumentException("Invalid secret key");
+        }
+    }
+
+    public String getCategory(String token) {
+        try {
+            return extractClaims(token).get("category", String.class);
+        } catch (Exception e) {
+            log.error("Failed to extract category", e);
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    public String createAccessToken(Long userId, String email, UserRole role) {
+        Date now = new Date();
+        return BEARER_PREFIX + Jwts.builder()
+                .claim("category", TokenType.ACCESS.name())
+                .setExpiration(new Date(now.getTime() + TokenType.ACCESS.getLifeTime()))
+                .setSubject(String.valueOf(userId))
+                .claim("email", email)
+                .claim("userRole", role.getUserRole())
+                .setIssuedAt(now)
+                .signWith(key)
+                .compact();
+    }
+
+    public String createRefreshToken(Long userId, String email, UserRole role) {
+        Date now = new Date();
+        return BEARER_PREFIX + Jwts.builder()
+                .claim("category", TokenType.REFRESH.name())
+                .setExpiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
+                .setSubject(String.valueOf(userId))
+                .claim("email", email)
+                .claim("userRole", role.getUserRole())
+                .setIssuedAt(now)
+                .signWith(key)
+                .compact();
+    }
+
+    public Claims extractClaims(String token) {
+        try {
+            String parsedToken = substringToken(token);
+            return getJwtParser().parseClaimsJws(parsedToken).getBody();
+        } catch (Exception e) {
+            log.error("Failed to extract claims", e);
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
 }
