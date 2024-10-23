@@ -6,9 +6,11 @@ import com.sparta.codechef.common.enums.Organization;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.enums.Language;
 import com.sparta.codechef.domain.chat.entity.ChatRoom;
-import com.sparta.codechef.domain.point.entity.Point;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
+
 
 @Getter
 @Entity
@@ -46,11 +48,35 @@ public class User extends Timestamped {
     @Builder.Default
     private Integer point = 0;
 
+    @Column(nullable = false)
+    private Boolean isAttended = false;
+
+    // 계정 차단 만료 시간
+    @Column
+    private LocalDateTime blockUntil;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
 
     public void isDelete() {
         isDeleted = true;
+    }
+
+    public void isAttended() {
+        isAttended = true;
+    }
+
+    public void changePassword(String password) {
+        this.password = password;
+    }
+
+    public boolean isBlocked() {
+        return blockUntil != null && blockUntil.isBefore(LocalDateTime.now());
+    }
+
+    public void addWarningAndSetBlock(int dayToBlock) {
+        this.warning ++;
+        this.blockUntil = LocalDateTime.now().plusDays(dayToBlock);
     }
 }
