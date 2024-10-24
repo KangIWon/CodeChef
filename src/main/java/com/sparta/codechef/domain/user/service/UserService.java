@@ -1,49 +1,83 @@
 package com.sparta.codechef.domain.user.service;
 
-import com.sparta.codechef.domain.user.dto.UserRequest;
+
+import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.exception.ApiException;
+import com.sparta.codechef.domain.user.dto.response.UserPoint;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
-import com.sparta.codechef.security.JwtUtil;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
-@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final PasswordEncoder passwordEncoder;
 
-//    public void changePassword(Long userId, String oldPassword, String newPassword) {
-//
-//    }
-//
-//    public void deleteUser(Long userId, AuthUser authUser, UserRequest.Delete request) {
-//        if(userId != authUser.getUserId()) {
-//            //throw new AccessDeniedException("탈퇴 권한이 없습니다.");
-//        }
-//
-//        User user = userRepository.findById(userId)
-//                .orElseThrow();//UserNotFoundException::new);
-//
-//        if(passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-//            //throw new AccessDeniedException("비밀번호가 다릅니다.");
-//        }
-//
-//        if(user.getIsDeleted()) {
-//            //throw new InvalidRequestException("이미 탈퇴한 유저입니다.");
-//        }
-//
-//        user.isDelete();
-//        userRepository.save(user);
-//
-//        // refresh 토큰 삭제
-//        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + authUser.getUserId());
-//    }
+    // 자동으로 IsAttend false로 바꾸는 것
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void resetAllIsAttend() {
+        userRepository.resetIsAttend();
+    }
+
+    // 자동으로 포인트 감소하는 것
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void decreasePointsAutomatically() {
+        List<User> users = userRepository.findAll();
+        for (User user : users) {
+            if (shouldDecreasePoints(user)) {
+                decreasePoints(user);
+            }
+        }
+    }
+
+    // 마지막 출석일로부터 7일 지났는지 확인하는 메서드
+    private boolean shouldDecreasePoints(User user) {
+        LocalDate lastAttendDate = user.getLastAttendDate();
+        LocalDate currentDate = LocalDate.now();
+        return lastAttendDate != null && ChronoUnit.DAYS.between(lastAttendDate, currentDate) >= 7;
+    }
+
+    // 포인트 10% 차감 및 마지막 차감일 업데이트 메서드
+    private void decreasePoints(User user) {
+        Integer currentPoint = user.getPoint();
+        Integer decreasedPoint = currentPoint - (currentPoint / 10);
+
+        user.updatePoint(decreasedPoint);
+        user.updateLastAttendDate();
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public Void creditPoints(AuthUser authUser) {
+        User user = userRepository.findById(authUser.getUserId())
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        if (user.getIsAttended()) {
+            throw new ApiException(ErrorStatus.ALREADY_ATTEND);
+        }
+        user.changeIsAttend();
+        user.updateLastAttendDate();
+        user.addPoint();
+        userRepository.save(user);
+        return null;
+    }
+
+    public UserPoint getUserPoint(AuthUser authUser) {
+        User user = userRepository.findById(authUser.getUserId())
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        Integer point = user.getPoint();
+        return new UserPoint(point);
+    }
 }
