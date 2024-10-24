@@ -9,7 +9,8 @@ spring:
   servlet:
     multipart:
       max-file-size: 5MB
-      max-request-size: 5MB
+      max-request-size: 10MB
+      enabled: true
   jpa:
     show-sql: true
     hibernate:

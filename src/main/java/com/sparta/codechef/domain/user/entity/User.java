@@ -46,7 +46,6 @@ public class User extends Timestamped {
     @Builder.Default
     private Integer point = 0;
 
-    @Column(nullable = false)
     @Builder.Default
     private Boolean isAttended = false;
 
@@ -110,5 +109,9 @@ public class User extends Timestamped {
         if (this.warning > 2) {
             this.blockUntil = LocalDateTime.now().minusDays(30);
         }
+    }
+
+    public void updateChatRoom(ChatRoom chatRoom) {
+        this.chatRoom = chatRoom;
     }
 }

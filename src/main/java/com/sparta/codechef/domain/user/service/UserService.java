@@ -61,7 +61,7 @@ public class UserService {
     @Transactional
     public Void creditPoints(AuthUser authUser) {
         User user = userRepository.findById(authUser.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (user.getIsAttended()) {
             throw new ApiException(ErrorStatus.ALREADY_ATTEND);
@@ -75,7 +75,7 @@ public class UserService {
 
     public UserPoint getUserPoint(AuthUser authUser) {
         User user = userRepository.findById(authUser.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         Integer point = user.getPoint();
         return new UserPoint(point);

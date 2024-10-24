@@ -131,7 +131,7 @@ public class AuthService {
     @Transactional
     public void deleteUser(AuthUser user, UserRequest.Delete request) {
         User foundUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(request.getPassword(), foundUser.getPassword())) {
             throw new ApiException(ErrorStatus.INVALID_CREDENTIALS);
@@ -148,7 +148,7 @@ public class AuthService {
     @Transactional
     public void changePassword(AuthUser user, AuthRequest.ChangePassword changePasswordRequest) {
         User foundUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), foundUser.getPassword())) {
             throw new ApiException(ErrorStatus.INVALID_CREDENTIALS);
@@ -166,14 +166,14 @@ public class AuthService {
     @Transactional
     public void addWarningAndSetBlock(AuthUser user, Long userId) {
         User user1 = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (!user1.getUserRole().equals(UserRole.ROLE_ADMIN)) {
             throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
         }
 
         User user2 = userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         user2.addWarningAndSetBlock();
 
@@ -182,7 +182,7 @@ public class AuthService {
 
     public AuthResponse.getMe getUserSensitiveInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         return new AuthResponse.getMe(
                 user.getId(),
@@ -198,7 +198,7 @@ public class AuthService {
 
     public AuthResponse.getOther getUserGeneralInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         return new AuthResponse.getOther(
                 user.getPersonalHistory(),

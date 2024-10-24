@@ -56,17 +56,4 @@ public class Board extends Timestamped {
         if (language != null) this.language = language;
         if (framework != null) this.framework = framework;
     }
-
-    @Override
-    public String toString() {
-        return "Board{" +
-                "id=" + id +
-                ", user=" + user +
-                ", title='" + title + '\'' +
-                ", contents='" + contents + '\'' +
-                ", language=" + language +
-                ", framework=" + framework +
-                ", comments=" + comments +
-                '}';
-    }
 }

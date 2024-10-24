@@ -20,4 +20,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Query("UPDATE User u SET u.isAttended = false")
     void resetIsAttend();
 
+    @Query("SELECT count(u) FROM User u WHERE u.chatRoom.id = :chatRoomId")
+    int countAllByChatRoom(Long chatRoomId);
+
+    @Query("SELECT exists(SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId)")
+    boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
 }

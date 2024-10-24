@@ -1,32 +1,21 @@
 package com.sparta.codechef.security;
 
 import com.sparta.codechef.common.ErrorStatus;
-import com.sparta.codechef.common.enums.TokenType;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
-import javax.crypto.SecretKey;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.rmi.ServerException;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
 @Slf4j(topic = "JWT Util")
 @Component
