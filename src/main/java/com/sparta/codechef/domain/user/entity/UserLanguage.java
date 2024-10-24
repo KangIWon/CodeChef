@@ -22,4 +22,14 @@ public class UserLanguage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id")
     private Language language;
+
+    public UserLanguage(User user, Language language)
+    {
+        this.user = user;
+        this.language = language;
+    }
+    public void update(Language language)
+    {
+        this.language = language;
+    }
 }

@@ -21,17 +21,18 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService {
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final RedisTemplate<String, Object> redisTemplate;
+//    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${ADMIN_TOKEN}")
     private String adminToken;
 
+    @Transactional
     public AuthResponse.Signup signup(AuthRequest.Signup request) {
         validatePassword(request.getPassword());
 
@@ -84,9 +85,14 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public AuthResponse.Login login(AuthRequest.Login request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CREDENTIALS));
+
+        if (user.isBlocked()) {
+            throw new ApiException(ErrorStatus.ACCOUNT_BLOCKED); // 계정이 차단된 경우 예외 발생
+        }
 
         validateUserState(user);
         validatePasswordMatch(request.getPassword(), user.getPassword());
@@ -117,14 +123,15 @@ public class AuthService {
         }
     }
 
-    public void logout(AuthUser user) {
-//        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
-        //redisTemplate.delete(JwtUtil. + user.getUserId());
-    }
+//    public void logout(AuthUser user) {
+////        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
+//        //redisTemplate.delete(JwtUtil. + user.getUserId());
+//    }
 
+    @Transactional
     public void deleteUser(AuthUser user, UserRequest.Delete request) {
         User foundUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(request.getPassword(), foundUser.getPassword())) {
             throw new ApiException(ErrorStatus.INVALID_CREDENTIALS);
@@ -138,9 +145,10 @@ public class AuthService {
 
     }
 
+    @Transactional
     public void changePassword(AuthUser user, AuthRequest.ChangePassword changePasswordRequest) {
         User foundUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), foundUser.getPassword())) {
             throw new ApiException(ErrorStatus.INVALID_CREDENTIALS);
@@ -155,17 +163,47 @@ public class AuthService {
         return new AuthResponse.DuplicateCheck(isDuplicate);
     }
 
-//    public void addWarningAndSetBlock(AuthUser user, Long userId) {
-//        User user1 = userRepository.findById(user.getUserId())
-//                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
-//
-//        if (!user1.getUserRole().equals(UserRole.ROLE_ADMIN)) {
-//            throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
-//        }
-//
-//        User user2 = userRepository.findById(userId)
-//                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
-//
-//        user2.addWarningAndSetBlock(1);
-//    }
+    @Transactional
+    public void addWarningAndSetBlock(AuthUser user, Long userId) {
+        User user1 = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        if (!user1.getUserRole().equals(UserRole.ROLE_ADMIN)) {
+            throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
+        }
+
+        User user2 = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        user2.addWarningAndSetBlock();
+
+        userRepository.save(user2);
+    }
+
+    public AuthResponse.getMe getUserSensitiveInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        return new AuthResponse.getMe(
+                user.getId(),
+                user.getEmail(),
+                user.getUserRole(),
+                user.getPersonalHistory(),
+                user.getOrganization().name(),
+                user.getWarning(),
+                user.getPoint(),
+                user.getIsAttended()
+        );
+    }
+
+    public AuthResponse.getOther getUserGeneralInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+
+        return new AuthResponse.getOther(
+                user.getPersonalHistory(),
+                user.getOrganization().name(),
+                user.getPoint()
+        );
+    }
 }

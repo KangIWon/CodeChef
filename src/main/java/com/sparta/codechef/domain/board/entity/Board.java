@@ -3,9 +3,15 @@ package com.sparta.codechef.domain.board.entity;
 import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Language;
+import com.sparta.codechef.common.enums.LanguageConverter;
+import com.sparta.codechef.domain.comment.entity.Comment;
+import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
 
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -19,8 +25,9 @@ public class Board extends Timestamped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")
-    private Long user_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -28,7 +35,7 @@ public class Board extends Timestamped {
     @Column(name = "contents", nullable = false, length = 2000)
     private String contents;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = LanguageConverter.class)
     @Column(name = "language", nullable = false)
     private Language language;
 
@@ -36,4 +43,17 @@ public class Board extends Timestamped {
     @Column(name = "framework", nullable = false)
     private Framework framework;
 
+    @OneToMany(mappedBy = "board")
+    private List<Comment> comments = new ArrayList<>();
+
+
+    public void BoardModify(String title,
+                            String contents,
+                            Language language,
+                            Framework framework)  {
+        if (title != null) this.title = title;
+        if (contents != null) this.contents = contents;
+        if (language != null) this.language = language;
+        if (framework != null) this.framework = framework;
+    }
 }
