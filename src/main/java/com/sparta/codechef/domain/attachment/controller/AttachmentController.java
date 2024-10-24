@@ -29,7 +29,7 @@ public class AttachmentController {
     public ApiResponse<List<AttachmentResponse>> uploadFiles(
             @AuthenticationPrincipal AuthUser authUser,
             @PathVariable Long boardId,
-            @RequestPart(name = "file") List<MultipartFile> fileList
+            @RequestPart(name = "fileList") List<MultipartFile> fileList
     ) {
         return ApiResponse.ok(
                 "첨부파일이 추가되었습니다.",
@@ -60,12 +60,19 @@ public class AttachmentController {
      */
     @PutMapping
     public ApiResponse<List<AttachmentResponse>> updateFiles(
-            @RequestBody Long boardId,
-            @RequestPart(name = "file") List<MultipartFile> file
+            @PathVariable Long boardId,
+            @RequestPart(name = "fileList") List<MultipartFile> file
     ) {
         return ApiResponse.ok(
                 "첨부파일이 수정되었습니다.",
                 this.attachmentService.updateFiles(boardId, file)
         );
+    }
+
+    @DeleteMapping
+    public ApiResponse<Void> deleteFiles(@PathVariable Long boardId) {
+        this.attachmentService.deleteFiles(boardId);
+
+        return ApiResponse.ok("첨부파일이 삭제되었습니다.", null);
     }
 }

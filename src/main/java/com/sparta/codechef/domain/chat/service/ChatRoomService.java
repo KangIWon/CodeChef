@@ -37,7 +37,7 @@ public class ChatRoomService {
         );
 
         String title = request.getTitle();
-        if (title == null || title.isEmpty()) {
+        if (title == null || title.isBlank()) {
             title = "채팅방";
         }
 

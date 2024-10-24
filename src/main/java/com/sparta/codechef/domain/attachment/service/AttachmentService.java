@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -149,6 +148,14 @@ public class AttachmentService {
 
 
     /**
+     * 게시글 첨부파일 전체 삭제
+     * @param boardId : 게시글 ID
+     */
+    public void deleteFiles(Long boardId) {
+
+    }
+
+    /**
      * 단일 첨부 파일 삭제
      * @param key : 첨부 파일
      */
@@ -196,4 +203,6 @@ public class AttachmentService {
     private String getOriginalFileName(Long boardId, String key) {
         return key.substring(this.getPath(boardId).length());
     }
+
+
 }

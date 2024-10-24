@@ -29,11 +29,11 @@ public class ChatRoom {
     private User user; // 방장
 
     public void updateRoomInfo(String title, String password, Integer maxParticipants) {
-        if (title != null && !title.isEmpty()) {
+        if (title != null && !title.isBlank()) {
             this.title = title;
         }
 
-        if (password != null && !password.isEmpty()) {
+        if (password != null && !password.isBlank()) {
             this.password = password;
         }
 
