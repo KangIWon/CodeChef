@@ -27,7 +27,9 @@ public enum ErrorStatus implements BaseCode {
     INVALID_CREDENTIALS(HttpStatus.BAD_REQUEST,400,"잘못된 비밀번호 입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
     ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다."),
-    NOT_FOUND_LANGUAGE(HttpStatus.NOT_FOUND, 400, "언어를 찾지 못했습니다.");
+    NOT_FOUND_LANGUAGE(HttpStatus.NOT_FOUND, 400, "언어를 찾지 못했습니다."),
+    ALREADY_ASSIGNED_USER_LANGUAGE(HttpStatus.CONFLICT, 409, "유저의 언어가 중복됩니다."),
+    NOT_FOUND_USER_LANGUAGE(HttpStatus.NOT_FOUND,400, "유저의 프레임워크를 찾지 못했습니다.");
 
 
 
