@@ -34,7 +34,7 @@ public class UserLanguageService {
 
     @Transactional
     public Void createUserLanguage(AuthUser authUser, List<LanguageRequest> languageRequestlist){
-        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.USER_NOT_FOUND));
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         for(LanguageRequest languageRequest : languageRequestlist)
         {
@@ -76,7 +76,7 @@ public class UserLanguageService {
     @Transactional
     public Object updateUserLanguage(AuthUser authUser, List<LanguageRequest> languageRequestlist) {
         User user = userRepository.findById(authUser.getUserId())
-                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         List<UserLanguage> userLanguageList = userLanguageRepository.findAllByUserId(user.getId())
                 .orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER_LANGUAGE));
