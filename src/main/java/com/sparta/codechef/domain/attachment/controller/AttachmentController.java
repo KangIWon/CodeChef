@@ -52,27 +52,32 @@ public class AttachmentController {
     }
 
 
-    /**
-     * 첨부파일 수정
-     * @param boardId : 게시글 ID
-     * @param file : 첨부파일 리스트
-     * @return 상태 코드, 상태 메세지, 첨부파일 정보 리스트
-     */
-    @PutMapping
-    public ApiResponse<List<AttachmentResponse>> updateFiles(
-            @PathVariable Long boardId,
-            @RequestPart(name = "fileList") List<MultipartFile> file
-    ) {
-        return ApiResponse.ok(
-                "첨부파일이 수정되었습니다.",
-                this.attachmentService.updateFiles(boardId, file)
-        );
-    }
-
-    @DeleteMapping
-    public ApiResponse<Void> deleteFiles(@PathVariable Long boardId) {
-        this.attachmentService.deleteFiles(boardId);
-
-        return ApiResponse.ok("첨부파일이 삭제되었습니다.", null);
-    }
+//    /**
+//     * 첨부파일 수정
+//     * @param boardId : 게시글 ID
+//     * @param file : 첨부파일 리스트
+//     * @return 상태 코드, 상태 메세지, 첨부파일 정보 리스트
+//     */
+//    @PutMapping
+//    public ApiResponse<List<AttachmentResponse>> updateFiles(
+//            @PathVariable Long boardId,
+//            @RequestPart(name = "fileList") List<MultipartFile> file
+//    ) {
+//        return ApiResponse.ok(
+//                "첨부파일이 수정되었습니다.",
+//                this.attachmentService.updateFiles(boardId, file)
+//        );
+//    }
+//
+//    /**
+//     * 게시글 전체 첨부파일 삭제
+//     * @param boardId
+//     * @return
+//     */
+//    @DeleteMapping
+//    public ApiResponse<Void> deleteFiles(@PathVariable Long boardId) {
+//        this.attachmentService.deleteFiles(boardId);
+//
+//        return ApiResponse.ok("첨부파일이 삭제되었습니다.", null);
+//    }
 }
