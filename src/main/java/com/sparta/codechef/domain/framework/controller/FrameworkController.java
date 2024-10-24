@@ -20,13 +20,13 @@ public class FrameworkController {
     private final FrameworkService frameworkService;
 
     @PostMapping
-    public ApiResponse createFramework(@AuthenticationPrincipal AuthUser authUser, FrameworkRequest frameworkRequest)
+    public ApiResponse createFramework(@AuthenticationPrincipal AuthUser authUser,@RequestBody FrameworkRequest frameworkRequest)
     {
        return ApiResponse.createSuccess(HttpStatus.OK.value(),"프레임워크가 등록되었습니다.",frameworkService.createFramework(authUser, frameworkRequest));
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse updateFramework(@AuthenticationPrincipal AuthUser authUser,FrameworkRequest frameworkRequest, @PathVariable Long id)
+    public ApiResponse updateFramework(@AuthenticationPrincipal AuthUser authUser,@RequestBody FrameworkRequest frameworkRequest, @PathVariable Long id)
     {
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "프레임워크가 수정되었습니다.",frameworkService.updateFramework(authUser,frameworkRequest,id));
     }

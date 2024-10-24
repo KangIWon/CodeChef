@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,10 +39,17 @@ public class UserFrameworkService {
         {
             Framework framework = frameworkRepository.findByName(frameworkRequest.getName()).orElseThrow(()->
                     new ApiException(ErrorStatus.NOT_FOUND_FRAMEWORK));
+            // 중복 체크: 이미 User와 Framework 조합이 존재하는지 확인
+            Optional<UserFramework> existingUserFramework = userFrameworkRepository.findByUserIdAndFrameworkId(user.getId(), framework.getId());
 
-
-            UserFramework userFramework = new UserFramework(user, framework);
-            userFrameworkRepository.save(userFramework);
+            // 존재하지 않을 때만 저장
+            if (!existingUserFramework.isPresent()) {
+                UserFramework userFramework = new UserFramework(user, framework);
+                userFrameworkRepository.save(userFramework);
+            }
+            else {
+                throw new ApiException(ErrorStatus.ALREADY_ASSIGEND_USER_FRAMEWORK);
+            }
         }
 
         return null;
@@ -49,9 +57,9 @@ public class UserFrameworkService {
     @Transactional(readOnly = true)
     public List<FrameworkResponse> getUserFrameworks(AuthUser authUser) {
 
-        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.USER_NOT_FOUND));
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_FRAMEWORK));
         // 사용자의 UserFramework 목록을 가져오기
-        List<UserFramework> userFrameworks = userFrameworkRepository.findAllByUserId(user.getId());
+        List<UserFramework> userFrameworks = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.USER_NOT_FOUND));
 
         // 프레임워크 정보 추출 및 DTO 변환
         List<FrameworkResponse> frameworkResponseList = userFrameworks.stream()
@@ -72,7 +80,7 @@ public class UserFrameworkService {
                 .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
 
         // 현재 사용자의 UserFramework 목록 가져오기
-        List<UserFramework> userFrameworkList = userFrameworkRepository.findAllByUserId(user.getId());
+        List<UserFramework> userFrameworkList = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_FRAMEWORK));
 
         // 요청받은 FrameworkRequestList에서 프레임워크 이름을 기준으로 미리 조회하여 맵핑
         Map<String, Framework> frameworkMap = frameworkRequestList.stream()
