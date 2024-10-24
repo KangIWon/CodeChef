@@ -42,20 +42,20 @@ public class BoardController {
     public ApiResponse<Page<BoardResponse>> myCreatedBoard(@AuthenticationPrincipal AuthUser authUser,
                                                            @RequestParam(defaultValue = "1") int page,
                                                            @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.onSuccess("", boardService.myCreatedBoard(authUser, page, size));
+        return ApiResponse.ok("내가 쓴 게시물", boardService.myCreatedBoard(authUser, page, size));
     }
 
     @PutMapping("/{boardId}") // 게시물 수정
     public ApiResponse modifiedBoard(@PathVariable Long boardId,
                                      @RequestPart BoardModifiedRequest request,
                                      @AuthenticationPrincipal AuthUser authUser) {
-        return ApiResponse.onSuccess(boardId +"번 게시물 수정",boardService.modifiedBoard(boardId, request, authUser));
+        return ApiResponse.ok(boardId +"번 게시물 수정",boardService.modifiedBoard(boardId, request, authUser));
     }
 
     @DeleteMapping("/{boardId}") // 게시물 삭제
     public ApiResponse deletedBoard(@PathVariable Long boardId,
                                     @AuthenticationPrincipal AuthUser authUser) {
-        return ApiResponse.onSuccess(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser));
+        return ApiResponse.ok(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser));
     }
 
     @GetMapping("/search") // 게시물 제목, 내용으로 검색
@@ -64,6 +64,6 @@ public class BoardController {
                                                         @RequestParam(required = false) String content,
                                                         @RequestParam(defaultValue = "1") int page,
                                                         @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.onSuccess("검색 기록", boardService.boardSearch(title,content,page,size));
+        return ApiResponse.ok("검색 기록", boardService.boardSearch(title,content,page,size));
     }
 }

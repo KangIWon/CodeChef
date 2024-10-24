@@ -32,7 +32,4 @@ public class ApiResponse<T> {
         return createSuccess(HttpStatus.OK.value(), message, result);
     }
 
-    public static <T> ApiResponse<T> onSuccess(String message, T result) {
-        return new ApiResponse<>(200, message, result);
-    }
 }

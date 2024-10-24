@@ -90,7 +90,6 @@ public class BoardService {
         Board board = boardRepository.findById(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
-        System.out.println("authUser = " + authUser.getAuthorities());
         if (!board.getUser().getId().equals(authUser.getUserId()) && !authUser.getAuthorities().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.NOT_THE_AUTHOR);
 
