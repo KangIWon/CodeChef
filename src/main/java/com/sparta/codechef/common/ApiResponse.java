@@ -1,5 +1,6 @@
 package com.sparta.codechef.common;
 
+import com.sparta.codechef.domain.chat.entity.Message;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
@@ -29,5 +30,9 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> ok(String message, T result) {
         return createSuccess(HttpStatus.OK.value(), message, result);
+    }
+
+    public static <T> ApiResponse<T> onSuccess(String message, T result) {
+        return new ApiResponse<>(200, message, result);
     }
 }

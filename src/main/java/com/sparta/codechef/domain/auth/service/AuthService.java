@@ -27,7 +27,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final RedisTemplate<String, Object> redisTemplate;
+//    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${ADMIN_TOKEN}")
     private String adminToken;
@@ -88,6 +88,10 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CREDENTIALS));
 
+        if (user.isBlocked()) {
+            throw new ApiException(ErrorStatus.ACCOUNT_BLOCKED); // 계정이 차단된 경우 예외 발생
+        }
+
         validateUserState(user);
         validatePasswordMatch(request.getPassword(), user.getPassword());
         validateAdminLogin(request, user);
@@ -117,10 +121,10 @@ public class AuthService {
         }
     }
 
-    public void logout(AuthUser user) {
-//        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
-        //redisTemplate.delete(JwtUtil. + user.getUserId());
-    }
+//    public void logout(AuthUser user) {
+////        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
+//        //redisTemplate.delete(JwtUtil. + user.getUserId());
+//    }
 
     public void deleteUser(AuthUser user, UserRequest.Delete request) {
         User foundUser = userRepository.findById(user.getUserId())
@@ -155,17 +159,19 @@ public class AuthService {
         return new AuthResponse.DuplicateCheck(isDuplicate);
     }
 
-//    public void addWarningAndSetBlock(AuthUser user, Long userId) {
-//        User user1 = userRepository.findById(user.getUserId())
-//                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
-//
-//        if (!user1.getUserRole().equals(UserRole.ROLE_ADMIN)) {
-//            throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
-//        }
-//
-//        User user2 = userRepository.findById(userId)
-//                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
-//
-//        user2.addWarningAndSetBlock(1);
-//    }
+    public void addWarningAndSetBlock(AuthUser user, Long userId) {
+        User user1 = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+
+        if (!user1.getUserRole().equals(UserRole.ROLE_ADMIN)) {
+            throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
+        }
+
+        User user2 = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+
+        user2.addWarningAndSetBlock();
+
+        userRepository.save(user2);
+    }
 }

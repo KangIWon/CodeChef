@@ -96,11 +96,19 @@ public class User extends Timestamped {
     }
 
     public boolean isBlocked() {
-        return blockUntil != null && blockUntil.isBefore(LocalDateTime.now());
+        return blockUntil != null && blockUntil.isAfter(LocalDateTime.now());
     }
 
-    public void addWarningAndSetBlock(int dayToBlock) {
+    public void addWarningAndSetBlock() {
         this.warning ++;
-        this.blockUntil = LocalDateTime.now().plusDays(dayToBlock);
+        if (this.warning.equals(1) ) {
+            this.blockUntil = LocalDateTime.now().plusDays(warning);
+        }
+        if (this.warning.equals(2)) {
+            this.blockUntil = LocalDateTime.now().minusDays(7);
+        }
+        if (this.warning > 2) {
+            this.blockUntil = LocalDateTime.now().minusDays(30);
+        }
     }
 }
