@@ -33,7 +33,7 @@ public class UserFrameworkService {
     @Transactional
     public Void createUserFramework(AuthUser authUser, List<FrameworkRequest> frameworkRequestList) {
 
-        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.USER_NOT_FOUND));
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
 
         for(FrameworkRequest frameworkRequest : frameworkRequestList)
         {
@@ -48,7 +48,7 @@ public class UserFrameworkService {
                 userFrameworkRepository.save(userFramework);
             }
             else {
-                throw new ApiException(ErrorStatus.ALREADY_ASSIGEND_USER_FRAMEWORK);
+                throw new ApiException(ErrorStatus.ALREADY_ASSIGNED_USER_FRAMEWORK);
             }
         }
 
@@ -59,7 +59,7 @@ public class UserFrameworkService {
 
         User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_FRAMEWORK));
         // 사용자의 UserFramework 목록을 가져오기
-        List<UserFramework> userFrameworks = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.USER_NOT_FOUND));
+        List<UserFramework> userFrameworks = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER_FRAMEWORK));
 
         // 프레임워크 정보 추출 및 DTO 변환
         List<FrameworkResponse> frameworkResponseList = userFrameworks.stream()
@@ -80,7 +80,7 @@ public class UserFrameworkService {
                 .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
 
         // 현재 사용자의 UserFramework 목록 가져오기
-        List<UserFramework> userFrameworkList = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_FRAMEWORK));
+        List<UserFramework> userFrameworkList = userFrameworkRepository.findAllByUserId(user.getId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER_FRAMEWORK));
 
         // 요청받은 FrameworkRequestList에서 프레임워크 이름을 기준으로 미리 조회하여 맵핑
         Map<String, Framework> frameworkMap = frameworkRequestList.stream()

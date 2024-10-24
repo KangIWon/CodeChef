@@ -25,7 +25,7 @@ public enum ErrorStatus implements BaseCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
     NOT_FOUND_FRAMEWORK(HttpStatus.NOT_FOUND, 404, "프레임워크를 찾지 못했습니다."),
     NOT_FOUND_USER_FRAMEWORK(HttpStatus.NOT_FOUND, 404, "유저의 프레임워크를 찾지 못했습니다."),
-    ALREADY_ASSIGEND_USER_FRAMEWORK(HttpStatus.CONFLICT, 409, "유저의 프레임워크가 중복됩니다.");
+    ALREADY_ASSIGNED_USER_FRAMEWORK(HttpStatus.CONFLICT, 409, "유저의 프레임워크가 중복됩니다.");
 
 
 
