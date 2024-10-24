@@ -5,6 +5,7 @@ import com.sparta.codechef.common.enums.Organization;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import jakarta.persistence.*;
+import java.time.LocalDate;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -58,6 +59,31 @@ public class User extends Timestamped {
 
     public void isDelete() {
         isDeleted = true;
+    }
+    @Column
+    private LocalDate lastAttendDate;
+
+    public void updateLastAttendDate() {
+        this.lastAttendDate = LocalDate.now();
+    }
+
+    // 출석 체크시,포인트 지급 메서드
+    public void addPoint() {
+        this.point += 100; // 포인트 증가
+    }
+
+    // 마지막 출석체크날로부터 일주일 지나면 포인트 10%감소한 값 바꿔주는 메서드
+    public void updatePoint(Integer point) {
+        this.point = point;
+    }
+
+    // 댓글 채택시, 댓글단 유저에게 포인트 지급 메서드
+    public void addPointToCommentUser() {
+        this.point += 200;
+    }
+
+    public void changeIsAttend() {
+        this.isAttended = true;
     }
 
     public void isAttended() {

@@ -22,9 +22,10 @@ public enum ErrorStatus implements BaseCode {
     // 유저 관련 예외
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, 401, "인증되지 않은 유저입니다."),
     NOT_FOUND_USER(HttpStatus.NOT_FOUND, 404, "유저를 찾을 수 없습니다."),
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),  // 통일 요망
     USER_DELETED(HttpStatus.BAD_REQUEST,400,"탈퇴된 유저입니다."),
     INVALID_CREDENTIALS(HttpStatus.BAD_REQUEST,400,"잘못된 비밀번호 입니다."),
+    ALREADY_ATTEND(HttpStatus.FORBIDDEN,403,"이미 출석한 유저입니다."),
+    ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다."),
 
     // 게시글 관련 예외
     NOT_FOUND_BOARD(HttpStatus.NOT_FOUND, 404, "게시글을 찾을 수 없습니다."),
@@ -43,7 +44,6 @@ public enum ErrorStatus implements BaseCode {
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, 400, "중복된 Email 입니다."),
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND,404,"댓글을 찾지 못했습니다"),
     NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다"),
-    ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다."),
 
     // 빌더 관련 예외
     ID_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "ID 필드는 설정할 수 없습니다."),
