@@ -21,7 +21,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -32,6 +32,7 @@ public class AuthService {
     @Value("${ADMIN_TOKEN}")
     private String adminToken;
 
+    @Transactional
     public AuthResponse.Signup signup(AuthRequest.Signup request) {
         validatePassword(request.getPassword());
 
@@ -84,6 +85,7 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    @Transactional
     public AuthResponse.Login login(AuthRequest.Login request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CREDENTIALS));
@@ -126,6 +128,7 @@ public class AuthService {
 //        //redisTemplate.delete(JwtUtil. + user.getUserId());
 //    }
 
+    @Transactional
     public void deleteUser(AuthUser user, UserRequest.Delete request) {
         User foundUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
@@ -142,6 +145,7 @@ public class AuthService {
 
     }
 
+    @Transactional
     public void changePassword(AuthUser user, AuthRequest.ChangePassword changePasswordRequest) {
         User foundUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
@@ -159,6 +163,7 @@ public class AuthService {
         return new AuthResponse.DuplicateCheck(isDuplicate);
     }
 
+    @Transactional
     public void addWarningAndSetBlock(AuthUser user, Long userId) {
         User user1 = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
@@ -173,5 +178,32 @@ public class AuthService {
         user2.addWarningAndSetBlock();
 
         userRepository.save(user2);
+    }
+
+    public AuthResponse.getMe getUserSensitiveInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+
+        return new AuthResponse.getMe(
+                user.getId(),
+                user.getEmail(),
+                user.getUserRole(),
+                user.getPersonalHistory(),
+                user.getOrganization().name(),
+                user.getWarning(),
+                user.getPoint(),
+                user.getIsAttended()
+        );
+    }
+
+    public AuthResponse.getOther getUserGeneralInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.USER_NOT_FOUND));
+
+        return new AuthResponse.getOther(
+                user.getPersonalHistory(),
+                user.getOrganization().name(),
+                user.getPoint()
+        );
     }
 }

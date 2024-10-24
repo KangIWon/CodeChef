@@ -61,15 +61,41 @@ public class AuthResponse {
         }
     }
 
-//    @Getter
-//    @NoArgsConstructor
-//    public static class Reissue {
-//        private String newAccessToken;
-//        private String newRefreshToken;
-//
-//        public Reissue(String newAccessToken, String newRefreshToken) {
-//            this.newAccessToken = newAccessToken;
-//            this.newRefreshToken = newRefreshToken;
-//        }
-//    }
+    @Getter
+    @NoArgsConstructor
+    public static class getMe {
+        private Long userId;
+        private String email;
+        private UserRole userRole;
+        private String personalHistory;
+        private String organization;
+        private Integer warning;
+        private Integer point;
+        private Boolean isAttended;
+
+        public getMe(Long userId, String email, UserRole userRole, String personalHistory, String organization, Integer warning, Integer point, Boolean isAttended) {
+            this.userId = userId;
+            this.email = email;
+            this.userRole = userRole;
+            this.personalHistory = personalHistory;
+            this.organization = organization;
+            this.warning = warning;
+            this.point = point;
+            this.isAttended = isAttended;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class getOther {
+        private String personalHistory;
+        private String organization;
+        private Integer point;
+
+        public getOther(String personalHistory, String organization, Integer point) {
+            this.personalHistory = personalHistory;
+            this.organization = organization;
+            this.point = point;
+        }
+    }
 }
