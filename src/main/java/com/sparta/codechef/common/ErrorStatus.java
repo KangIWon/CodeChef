@@ -44,6 +44,7 @@ public enum ErrorStatus implements BaseCode {
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, 400, "중복된 Email 입니다."),
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND,404,"댓글을 찾지 못했습니다"),
     NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다"),
+    ALREADY_ADOPTED_COMMENT(HttpStatus.BAD_REQUEST, 400, "이미 채택된 댓글입니다"),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
 

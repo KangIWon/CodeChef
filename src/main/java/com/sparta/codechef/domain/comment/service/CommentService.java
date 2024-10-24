@@ -32,8 +32,8 @@ public class CommentService {
 
     @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
-        User user = userRepository.findById(authUser.getUserId()).orElse(null);
-        Board board = boardRepository.findById(boardId).orElse(null);
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
+        Board board = boardRepository.findById(boardId).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
         Comment comment = Comment.builder().content(commentRequest.getComment()).user(user).board(board).build();
         commentRepository.save(comment);
@@ -54,7 +54,7 @@ public class CommentService {
 
     @Transactional
     public CommentUpdateResponse updateComment(AuthUser authUser, Long boardId, Long commentId, CommentRequest commentRequest) {
-        Board board = boardRepository.findById(boardId).orElse(null);
+        Board board = boardRepository.findById(boardId).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_BOARD));
         System.out.println("board = " + board);
 
         Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
@@ -73,20 +73,29 @@ public class CommentService {
         if(authUser.getUserId().equals(comment.getUser().getId()))
         {
             commentRepository.delete(comment);
-//            throw new ApiException(ErrorStatus.EXAMPLE_ERROR);
+            return null;
         }
-        return null;
+        else throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
     }
 
 
     @Transactional
     public Void adoptedComment(AuthUser authUser, Long boardId, Long commentId){
-        Board board = boardRepository.findById(boardId).orElse(null);
-        Comment comment = commentRepository.findByCommentIdAndUserIdAndBoardId(commentId,authUser.getUserId(),board.getId()).orElseThrow(()
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
+        Board board = boardRepository.findById(boardId).orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+        Comment comment = commentRepository.findByIdAndBoardId(commentId,board.getId()).orElseThrow(()
                 -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
-        comment.isAdopted(comment.getIsAdopted());
+
+        if(comment.getIsAdopted()){
+            throw new ApiException(ErrorStatus.ALREADY_ADOPTED_COMMENT);
+        }
+
+
+        comment.isAdopted();
         commentRepository.save(comment);
 
+        comment.getUser().addPointToCommentUser();
+        userRepository.save(user);
         return null;
     }
 }
