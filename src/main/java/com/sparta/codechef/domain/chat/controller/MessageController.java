@@ -14,6 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/chatRooms/{chatRoomId}")
 public class MessageController {
+    //
 
     private final MessageService messageService;
 

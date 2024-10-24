@@ -28,7 +28,7 @@ public class AttachmentService {
     private final BoardRepository boardRepository;
     private final AmazonS3Client amazonS3Client;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${s3.bucket}")
     private String bucketName;
 
 

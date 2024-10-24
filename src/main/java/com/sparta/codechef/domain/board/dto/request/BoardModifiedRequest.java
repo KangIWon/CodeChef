@@ -5,11 +5,11 @@ import com.sparta.codechef.common.enums.Language;
 import lombok.Getter;
 
 @Getter
-public class BoardCreatedRequest {
+public class BoardModifiedRequest {
+
     public String title;
     public String contents;
     public Language language;
     public Framework framework;
-
 
 }

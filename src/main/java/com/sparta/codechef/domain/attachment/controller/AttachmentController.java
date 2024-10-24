@@ -59,7 +59,7 @@ public class AttachmentController {
      * @return 상태 코드, 상태 메세지, 첨부파일 정보 리스트
      */
     @PutMapping
-    public ApiResponse<List<AttachmentResponse>> getFiles(
+    public ApiResponse<List<AttachmentResponse>> updateFiles(
             @RequestBody Long boardId,
             @RequestPart(name = "file") List<MultipartFile> file
     ) {

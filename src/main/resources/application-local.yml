@@ -9,7 +9,7 @@ spring:
   servlet:
     multipart:
       max-file-size: 5MB
-      max-request-size: 10MB
+      max-request-size: 5MB
   jpa:
     show-sql: true
     hibernate:
@@ -19,12 +19,13 @@ spring:
         format_sql: true
         show_sql: true
         use_sql_comments: true
-cloud.aws.s3:
-  credentials:
-    access-key: ${S3_CREDENTIALS_ACCESS_KEY}
-    secret-key: ${S3_CREDENTIALS_SECRET_KEY}
-    region: ${S3_credentials_REGION}
-  bucket: ${S3_BUCKET}
 jwt:
   secret:
     key: ${JWT_SECRET_KEY}
+
+s3:
+  credentials:
+    access-key: ${S3_CREDENTIALS_ACCESS_KEY}
+    secret-key: ${S3_CREDENTIALS_SECRET_KEY}
+    region: ${S3_CREDENTIALS_REGION}
+  bucket: ${S3_BUCKET}
