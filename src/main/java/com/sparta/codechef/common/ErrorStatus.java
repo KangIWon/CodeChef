@@ -45,6 +45,15 @@ public enum ErrorStatus implements BaseCode {
     NOT_FOUND_COMMENT(HttpStatus.NOT_FOUND,404,"댓글을 찾지 못했습니다"),
     NOT_FOUND_COMMENT_LIST(HttpStatus.NOT_FOUND,404,"댓글 리스트를 찾지 못했습니다"),
 
+    USER_DELETED(HttpStatus.BAD_REQUEST,400,"탈퇴된 유저입니다."),
+    INVALID_CREDENTIALS(HttpStatus.BAD_REQUEST,400,"잘못된 비밀번호 입니다."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
+    ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다."),
+    NOT_FOUND_LANGUAGE(HttpStatus.NOT_FOUND, 400, "언어를 찾지 못했습니다."),
+    ALREADY_ASSIGNED_USER_LANGUAGE(HttpStatus.CONFLICT, 409, "유저의 언어가 중복됩니다."),
+    NOT_FOUND_USER_LANGUAGE(HttpStatus.NOT_FOUND,400, "유저의 프레임워크를 찾지 못했습니다."),
+
+
     // 빌더 관련 예외
     ID_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "ID 필드는 설정할 수 없습니다."),
     CREATED_AT_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "createdAt 필드는 설정할 수 없습니다."),

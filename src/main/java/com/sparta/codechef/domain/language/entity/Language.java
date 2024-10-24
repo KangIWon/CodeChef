@@ -21,5 +21,11 @@ public class Language {
 
     private String name;
 
+    public void update(String name)
+    {
+        this.name = name;
+    }
+
+
 
 }
