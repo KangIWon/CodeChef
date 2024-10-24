@@ -26,7 +26,8 @@ public enum ErrorStatus implements BaseCode {
     USER_DELETED(HttpStatus.BAD_REQUEST,400,"탈퇴된 유저입니다."),
     INVALID_CREDENTIALS(HttpStatus.BAD_REQUEST,400,"잘못된 비밀번호 입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND,400,"유저를 찾지 못했습니다."),
-    ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다.");
+    ACCOUNT_BLOCKED(HttpStatus.BAD_REQUEST,400,"차단된 계정 입니다."),
+    NOT_FOUND_LANGUAGE(HttpStatus.NOT_FOUND, 400, "언어를 찾지 못했습니다.");
 
 
 
