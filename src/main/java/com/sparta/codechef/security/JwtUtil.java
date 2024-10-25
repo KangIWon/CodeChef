@@ -59,7 +59,7 @@ public class JwtUtil {
     }
 
     public String substringToken(String token) {
-        if (canSubstringToken(token)) {
+        if (StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX)) {
             return token.substring(BEARER_PREFIX.length());
         }
 
@@ -144,12 +144,6 @@ public class JwtUtil {
     }
 
     public Claims extractClaims(String token) {
-        try {
-            String parsedToken = substringToken(token);
-            return getJwtParser().parseClaimsJws(parsedToken).getBody();
-        } catch (Exception e) {
-            log.error("Failed to extract claims", e);
-            throw new IllegalArgumentException("Invalid token");
-        }
+        return getJwtParser().parseClaimsJws(token).getBody();
     }
 }

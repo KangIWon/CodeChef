@@ -88,6 +88,31 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+//    @Transactional
+//    public AuthResponse.Login login(AuthRequest.Login request) {
+//        User user = userRepository.findByEmail(request.getEmail())
+//                .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CREDENTIALS));
+//
+//        if (user.isBlocked()) {
+//            throw new ApiException(ErrorStatus.ACCOUNT_BLOCKED); // 계정이 차단된 경우 예외 발생
+//        }
+//
+//        validateUserState(user);
+//        validatePasswordMatch(request.getPassword(), user.getPassword());
+//        validateAdminLogin(request, user);
+//
+////        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
+////
+////        return new AuthResponse.Login(bearerToken, user.getId(), user.getEmail(), user.getUserRole().name());
+//
+//        String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(), user.getUserRole());
+//        String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), user.getUserRole());
+//
+//        saveRefreshTokenInRedis(user.getId(), refreshToken);
+//
+//        return new AuthResponse.Login(accessToken, refreshToken, user.getId(), user.getEmail(), user.getUserRole().name());
+//    }
+
     @Transactional
     public AuthResponse.Login login(AuthRequest.Login request) {
         User user = userRepository.findByEmail(request.getEmail())
