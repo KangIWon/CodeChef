@@ -10,7 +10,6 @@ import lombok.Getter;
 public class ChatRoomRequest {
 
     @Pattern(regexp = ".*\\S.*", message = "채팅방 이름은 공백 문자가 될 수 없습니다.")
-    @Size(min = 1, max = 25, message = "채팅방 이름은 1자 이상 25자 이하만 가능합니다.")
     private final String title;
     @Pattern(regexp = ".*\\S.*", message = "채팅방 비밀번호는 공백 문자가 될 수 없습니다.")
     private final String password;
