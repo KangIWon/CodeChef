@@ -224,65 +224,66 @@ public class AuthService {
         );
     }
 
-//    public AuthResponse.Reissue reissue(String refreshToken) {
-//        if(refreshToken == null) {
-//            return new AuthResponse.Reissue(ErrorStatus.NOT_FOUND_REFRESH_TOKEN));
-//        }
-//
-//        // 프론트에서 붙여준 Bearer prefix 제거
-//        try{
-//            refreshToken = jwtUtil.substringToken(refreshToken);
-//        } catch (NullPointerException e) {
-//            return ResponseDto.of(HttpStatus.BAD_REQUEST, "잘못된 토큰 형식 입니다.", null);
-//        }
-//
-//        // 리프레쉬 토큰인지 검사
-//        String category = jwtUtil.getCategory(refreshToken);
-//        if (!category.equals(TokenType.REFRESH.name())) {
-//            return ResponseDto.of(HttpStatus.BAD_REQUEST, "리프레쉬 토큰이 아닙니다.");
-//        }
-//
-//        // 토큰 만료 검사
-//        try{
-//            jwtUtil.isExpired(refreshToken);
-//        } catch (ExpiredJwtException e) {
-//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
-//        }
-//
-//
-//        String key = JwtUtil.REDIS_REFRESH_TOKEN_PREFIX  + jwtUtil.getUserId(refreshToken);
-//        // 레디스에서 리프레쉬 토큰을 가져온다.
-//        refreshToken = (String) redisTemplate.opsForValue().get(key);
-//
-//        if (refreshToken == null) {
-//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
-//        }
-//
-//        // redis에서 꺼내온 리프레쉬 토큰 prefix 제거
-//        refreshToken = jwtUtil.substringToken(refreshToken);
-//
-//        // 검증이 통과되었다면 refresh 토큰으로 액세스 토큰을 발행해준다.
-//        Claims claims = jwtUtil.extractClaims(refreshToken);
-//        Long userId = Long.parseLong(claims.getSubject());
-//        String email = claims.get("email", String.class);
-//        UserRole userRole = UserRole.of(claims.get("userRole", String.class));
-//
-//        // 새 토큰 발급
-//        String newAccessToken = jwtUtil.createAccessToken(userId, email, userRole);
-//        String newRefreshToken = jwtUtil.createRefreshToken(userId, email, userRole);
-//
-//        // TTL 새로해서
-//        String userIdToString = String.valueOf(userId);
-//        Long ttl = redisTemplate.getExpire(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + userIdToString, TimeUnit.MILLISECONDS);
-//
-//        if(ttl == null || ttl < 0) {
-//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
-//        }
-//
-//        redisTemplate.opsForValue().set(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX  + userIdToString, newRefreshToken, ttl, TimeUnit.MILLISECONDS);
-//
-//        Reissue reissue = new Reissue(newAccessToken, newRefreshToken);
-//
-//        return  ResponseDto.of(HttpStatus.OK, "", reissue);
-//    }
+    public AuthResponse.Reissue reissue(String refreshToken) {
+        // 1. 리프레시 토큰이 null인지 확인
+        if (!StringUtils.hasText(refreshToken)) {
+            throw new ApiException(ErrorStatus.NOT_FOUND_REFRESH_TOKEN);
+        }
+
+        try {
+            // 2. "Bearer " 접두사를 제거
+            refreshToken = jwtUtil.substringToken(refreshToken);
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(ErrorStatus.INVALID_TOKEN_FORMAT);
+        }
+
+        // 3. 리프레시 토큰인지 확인
+        String category = jwtUtil.getCategory(refreshToken);
+        if (!TokenType.REFRESH.name().equals(category)) {
+            throw new ApiException(ErrorStatus.NOT_REFRESH_TOKEN);
+        }
+
+        // 4. 토큰 만료 여부 검사
+        try{
+            jwtUtil.isExpired(refreshToken);
+        } catch (ExpiredJwtException e) {
+            throw new ApiException(ErrorStatus.EXPIRED_REFRESH_TOKEN);
+        }
+
+        // 5. 레디스에서 리프레시 토큰 가져오기
+        String key = JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + jwtUtil.getUserId(refreshToken);
+        String storedRefreshToken = (String) redisTemplate.opsForValue().get(key);
+        if (!StringUtils.hasText(storedRefreshToken)) {
+            throw new ApiException(ErrorStatus.EXPIRED_REFRESH_TOKEN);
+        }
+
+        // 6. 저장된 리프레시 토큰의 접두사 제거 후 비교
+        storedRefreshToken = jwtUtil.substringToken(storedRefreshToken);
+        if (!refreshToken.equals(storedRefreshToken)) {
+            throw new ApiException(ErrorStatus.INVALID_REFRESH_TOKEN);
+        }
+
+        // 7. 검증 통과 후 새로운 토큰 발급
+        Claims claims = jwtUtil.extractClaims(refreshToken);
+        Long userId = Long.parseLong(claims.getSubject());
+        String email = claims.get("email", String.class);
+        UserRole userRole = UserRole.of(claims.get("userRole", String.class));
+
+        String newAccessToken = jwtUtil.createAccessToken(userId, email, userRole);
+        String newRefreshToken = jwtUtil.createRefreshToken(userId, email, userRole);
+
+        // 8. 새로운 리프레시 토큰을 Redis에 저장
+        // TTL 새로해서
+        String userIdToString = String.valueOf(userId);
+        Long ttl = redisTemplate.getExpire(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + userIdToString, TimeUnit.MILLISECONDS);
+
+        if (ttl == null || ttl <= 0) {
+            throw new ApiException(ErrorStatus.EXPIRED_REFRESH_TOKEN);
+        }
+
+        redisTemplate.opsForValue().set(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX  + userIdToString, newRefreshToken, ttl, TimeUnit.MILLISECONDS);
+
+        // 9. 새로운 액세스 토큰과 리프레시 토큰 반환
+        return new AuthResponse.Reissue(newAccessToken, newRefreshToken);
+    }
 }

@@ -75,9 +75,9 @@ public class AuthController {
         }
     }
 
-//    @PostMapping("/reissue")
-//    public ApiResponse<AuthResponse.Reissue> reissue(@RequestHeader(JwtUtil.REFRESH_TOKEN_HEADER) String refreshToken) {
-//        AuthResponse.Reissue response = authService.reissue(refreshToken);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "토큰 재발급 성공", response);
-//    }
+    @PostMapping("/reissue")
+    public ApiResponse<AuthResponse.Reissue> reissue(@RequestHeader(JwtUtil.REFRESH_TOKEN_HEADER) String refreshToken) {
+        AuthResponse.Reissue response = authService.reissue(refreshToken);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "토큰 재발급 성공", response);
+    }
 }
