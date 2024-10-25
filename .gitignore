@@ -45,9 +45,7 @@ docker-compose.yml
 
 # Ignore Docker-related files
 *.log
-.dockerignore
-docker-compose.override.yml
-Dockerfile
+
 
 *.rdb
 *.aof
