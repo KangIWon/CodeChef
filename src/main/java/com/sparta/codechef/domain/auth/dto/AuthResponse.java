@@ -63,7 +63,7 @@ public class AuthResponse {
 
     @Getter
     @NoArgsConstructor
-    public static class getMe {
+    public static class GetMe {
         private Long userId;
         private String email;
         private UserRole userRole;
@@ -73,7 +73,7 @@ public class AuthResponse {
         private Integer point;
         private Boolean isAttended;
 
-        public getMe(Long userId, String email, UserRole userRole, String personalHistory, String organization, Integer warning, Integer point, Boolean isAttended) {
+        public GetMe(Long userId, String email, UserRole userRole, String personalHistory, String organization, Integer warning, Integer point, Boolean isAttended) {
             this.userId = userId;
             this.email = email;
             this.userRole = userRole;
@@ -87,15 +87,27 @@ public class AuthResponse {
 
     @Getter
     @NoArgsConstructor
-    public static class getOther {
+    public static class GetOther {
         private String personalHistory;
         private String organization;
         private Integer point;
 
-        public getOther(String personalHistory, String organization, Integer point) {
+        public GetOther(String personalHistory, String organization, Integer point) {
             this.personalHistory = personalHistory;
             this.organization = organization;
             this.point = point;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class Reissue {
+        private String newAccessToken;
+        private String newRefreshToken;
+
+        public Reissue(String newAccessToken, String newRefreshToken) {
+            this.newAccessToken = newAccessToken;
+            this.newRefreshToken = newRefreshToken;
         }
     }
 }

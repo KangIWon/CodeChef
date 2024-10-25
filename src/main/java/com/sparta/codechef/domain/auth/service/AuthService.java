@@ -12,9 +12,12 @@ import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import com.sparta.codechef.security.JwtUtil;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,31 +91,6 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-//    @Transactional
-//    public AuthResponse.Login login(AuthRequest.Login request) {
-//        User user = userRepository.findByEmail(request.getEmail())
-//                .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CREDENTIALS));
-//
-//        if (user.isBlocked()) {
-//            throw new ApiException(ErrorStatus.ACCOUNT_BLOCKED); // 계정이 차단된 경우 예외 발생
-//        }
-//
-//        validateUserState(user);
-//        validatePasswordMatch(request.getPassword(), user.getPassword());
-//        validateAdminLogin(request, user);
-//
-////        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
-////
-////        return new AuthResponse.Login(bearerToken, user.getId(), user.getEmail(), user.getUserRole().name());
-//
-//        String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(), user.getUserRole());
-//        String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), user.getUserRole());
-//
-//        saveRefreshTokenInRedis(user.getId(), refreshToken);
-//
-//        return new AuthResponse.Login(accessToken, refreshToken, user.getId(), user.getEmail(), user.getUserRole().name());
-//    }
-
     @Transactional
     public AuthResponse.Login login(AuthRequest.Login request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -125,10 +103,6 @@ public class AuthService {
         validateUserState(user);
         validatePasswordMatch(request.getPassword(), user.getPassword());
         validateAdminLogin(request, user);
-
-//        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
-//
-//        return new AuthResponse.Login(bearerToken, user.getId(), user.getEmail(), user.getUserRole().name());
 
         String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(), user.getUserRole());
         String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), user.getUserRole());
@@ -223,11 +197,11 @@ public class AuthService {
         userRepository.save(user2);
     }
 
-    public AuthResponse.getMe getUserSensitiveInfo(Long userId) {
+    public AuthResponse.GetMe getUserSensitiveInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
-        return new AuthResponse.getMe(
+        return new AuthResponse.GetMe(
                 user.getId(),
                 user.getEmail(),
                 user.getUserRole(),
@@ -239,14 +213,76 @@ public class AuthService {
         );
     }
 
-    public AuthResponse.getOther getUserGeneralInfo(Long userId) {
+    public AuthResponse.GetOther getUserGeneralInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
 
-        return new AuthResponse.getOther(
+        return new AuthResponse.GetOther(
                 user.getPersonalHistory(),
                 user.getOrganization().name(),
                 user.getPoint()
         );
     }
+
+//    public AuthResponse.Reissue reissue(String refreshToken) {
+//        if(refreshToken == null) {
+//            return new AuthResponse.Reissue(ErrorStatus.NOT_FOUND_REFRESH_TOKEN));
+//        }
+//
+//        // 프론트에서 붙여준 Bearer prefix 제거
+//        try{
+//            refreshToken = jwtUtil.substringToken(refreshToken);
+//        } catch (NullPointerException e) {
+//            return ResponseDto.of(HttpStatus.BAD_REQUEST, "잘못된 토큰 형식 입니다.", null);
+//        }
+//
+//        // 리프레쉬 토큰인지 검사
+//        String category = jwtUtil.getCategory(refreshToken);
+//        if (!category.equals(TokenType.REFRESH.name())) {
+//            return ResponseDto.of(HttpStatus.BAD_REQUEST, "리프레쉬 토큰이 아닙니다.");
+//        }
+//
+//        // 토큰 만료 검사
+//        try{
+//            jwtUtil.isExpired(refreshToken);
+//        } catch (ExpiredJwtException e) {
+//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
+//        }
+//
+//
+//        String key = JwtUtil.REDIS_REFRESH_TOKEN_PREFIX  + jwtUtil.getUserId(refreshToken);
+//        // 레디스에서 리프레쉬 토큰을 가져온다.
+//        refreshToken = (String) redisTemplate.opsForValue().get(key);
+//
+//        if (refreshToken == null) {
+//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
+//        }
+//
+//        // redis에서 꺼내온 리프레쉬 토큰 prefix 제거
+//        refreshToken = jwtUtil.substringToken(refreshToken);
+//
+//        // 검증이 통과되었다면 refresh 토큰으로 액세스 토큰을 발행해준다.
+//        Claims claims = jwtUtil.extractClaims(refreshToken);
+//        Long userId = Long.parseLong(claims.getSubject());
+//        String email = claims.get("email", String.class);
+//        UserRole userRole = UserRole.of(claims.get("userRole", String.class));
+//
+//        // 새 토큰 발급
+//        String newAccessToken = jwtUtil.createAccessToken(userId, email, userRole);
+//        String newRefreshToken = jwtUtil.createRefreshToken(userId, email, userRole);
+//
+//        // TTL 새로해서
+//        String userIdToString = String.valueOf(userId);
+//        Long ttl = redisTemplate.getExpire(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + userIdToString, TimeUnit.MILLISECONDS);
+//
+//        if(ttl == null || ttl < 0) {
+//            return ResponseDto.of(HttpStatus.UNAUTHORIZED, "만료된 리프레쉬 토큰입니다.", null);
+//        }
+//
+//        redisTemplate.opsForValue().set(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX  + userIdToString, newRefreshToken, ttl, TimeUnit.MILLISECONDS);
+//
+//        Reissue reissue = new Reissue(newAccessToken, newRefreshToken);
+//
+//        return  ResponseDto.of(HttpStatus.OK, "", reissue);
+//    }
 }

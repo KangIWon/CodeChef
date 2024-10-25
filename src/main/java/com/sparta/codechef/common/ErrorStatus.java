@@ -18,6 +18,7 @@ public enum ErrorStatus implements BaseCode {
     UNAUTHORIZED_TOKEN(HttpStatus.UNAUTHORIZED,401,"JWT 토큰 검증 중 오류가 발생했습니다."),
     FORBIDDEN_TOKEN(HttpStatus.FORBIDDEN, 403, "관리자 권한이 없습니다."),
     NOT_FOUND_TOKEN(HttpStatus.NOT_FOUND, 404, "JWT 토큰이 필요합니다."),
+    NOT_FOUND_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, 404, "재발급하려면 리프레쉬 토큰이 필요합니다."),
 
     // 유저 관련 예외
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, 401, "인증되지 않은 유저입니다."),
