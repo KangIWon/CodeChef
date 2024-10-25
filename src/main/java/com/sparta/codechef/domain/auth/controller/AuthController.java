@@ -31,11 +31,11 @@ public class AuthController {
         return ApiResponse.ok("로그인 성공", response);
     }
 
-//    @PostMapping("/logout")
-//    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
-//        authService.logout(user);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
-//    }
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
+        authService.logout(user);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
+    }
 
     @PostMapping("/delete")
     public ApiResponse<Void> deleteUser(@AuthenticationPrincipal AuthUser user, @RequestBody UserRequest.Delete request) {

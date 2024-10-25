@@ -2,6 +2,7 @@ package com.sparta.codechef.domain.auth.service;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.Organization;
+import com.sparta.codechef.common.enums.TokenType;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.auth.dto.AuthRequest;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.concurrent.TimeUnit;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,7 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-//    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${ADMIN_TOKEN}")
     private String adminToken;
@@ -98,9 +101,16 @@ public class AuthService {
         validatePasswordMatch(request.getPassword(), user.getPassword());
         validateAdminLogin(request, user);
 
-        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
+//        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
+//
+//        return new AuthResponse.Login(bearerToken, user.getId(), user.getEmail(), user.getUserRole().name());
 
-        return new AuthResponse.Login(bearerToken, user.getId(), user.getEmail(), user.getUserRole().name());
+        String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(), user.getUserRole());
+        String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), user.getUserRole());
+
+        saveRefreshTokenInRedis(user.getId(), refreshToken);
+
+        return new AuthResponse.Login(accessToken, refreshToken, user.getId(), user.getEmail(), user.getUserRole().name());
     }
 
     private void validateUserState(User user) {
@@ -123,10 +133,18 @@ public class AuthService {
         }
     }
 
-//    public void logout(AuthUser user) {
-////        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
-//        //redisTemplate.delete(JwtUtil. + user.getUserId());
-//    }
+        private void saveRefreshTokenInRedis(Long userId, String refreshToken) {
+        redisTemplate.opsForValue().set(
+                JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + userId,
+                refreshToken,
+                TokenType.REFRESH.getLifeTime(),
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    public void logout(AuthUser user) {
+        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
+    }
 
     @Transactional
     public void deleteUser(AuthUser user, UserRequest.Delete request) {
@@ -141,7 +159,7 @@ public class AuthService {
         userRepository.save(foundUser);
 
         // refresh 토큰 삭제
-//        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
+        redisTemplate.delete(JwtUtil.REDIS_REFRESH_TOKEN_PREFIX + user.getUserId());
 
     }
 

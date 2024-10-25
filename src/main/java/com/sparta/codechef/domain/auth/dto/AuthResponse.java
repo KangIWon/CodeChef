@@ -34,17 +34,17 @@ public class AuthResponse {
     @Getter
     @NoArgsConstructor
     public static class Login {
-//        private String accessToken;
-//        private String refreshToken;
-        private String bearerToken;
+        private String accessToken;
+        private String refreshToken;
+//        private String bearerToken;
         private Long userId;
         private String email;
         private String userRole;
 
-        public Login(String bearerToken, Long userId, String email, String userRole) {//(String accessToken, String refreshToken, Long userId, String email, String userRole) {
-//            this.accessToken = accessToken;
-//            this.refreshToken = refreshToken;
-            this.bearerToken = bearerToken;
+        public Login(String accessToken, String refreshToken, Long userId, String email, String userRole) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+//            this.bearerToken = bearerToken;
             this.userId = userId;
             this.email = email;
             this.userRole = userRole;

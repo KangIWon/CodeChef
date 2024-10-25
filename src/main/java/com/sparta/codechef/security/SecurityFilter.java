@@ -1,6 +1,5 @@
 package com.sparta.codechef.security;
 
-
 import com.sparta.codechef.common.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
