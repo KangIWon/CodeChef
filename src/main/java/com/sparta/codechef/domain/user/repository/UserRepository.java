@@ -28,7 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
 
     @Modifying
-    @Query("UPDATE User u SET u.point = GREATEST(u.point * 0.9, 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
+    @Query("UPDATE User u SET u.point = GREATEST(CAST(u.point * 0.9 AS integer), 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
     void decreaseAutomatically(LocalDate date,LocalDate today);
 
 }
