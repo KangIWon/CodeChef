@@ -6,6 +6,7 @@ import com.sparta.codechef.domain.auth.dto.AuthResponse;
 import com.sparta.codechef.domain.auth.service.AuthService;
 import com.sparta.codechef.domain.user.dto.UserRequest;
 import com.sparta.codechef.security.AuthUser;
+import com.sparta.codechef.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,11 +32,11 @@ public class AuthController {
         return ApiResponse.ok("로그인 성공", response);
     }
 
-//    @PostMapping("/logout")
-//    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
-//        authService.logout(user);
-//        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
-//    }
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@AuthenticationPrincipal AuthUser user) {
+        authService.logout(user);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "로그아웃되었습니다.", null);
+    }
 
     @PostMapping("/delete")
     public ApiResponse<Void> deleteUser(@AuthenticationPrincipal AuthUser user, @RequestBody UserRequest.Delete request) {
@@ -65,12 +66,18 @@ public class AuthController {
     public ApiResponse<?> getUserInfo(@AuthenticationPrincipal AuthUser user, @PathVariable Long userId) {
         if (user.getUserId().equals(userId)) {
             // 본인일 경우
-            AuthResponse.getMe response = authService.getUserSensitiveInfo(userId);
+            AuthResponse.GetMe response = authService.getUserSensitiveInfo(userId);
             return ApiResponse.ok( "사용자 민감정보 조회 성공", response);
         } else {
             // 다른 사용자일 경우
-            AuthResponse.getOther response = authService.getUserGeneralInfo(userId);
+            AuthResponse.GetOther response = authService.getUserGeneralInfo(userId);
             return ApiResponse.ok( "사용자 일반정보 조회 성공", response);
         }
+    }
+
+    @PostMapping("/reissue")
+    public ApiResponse<AuthResponse.Reissue> reissue(@RequestHeader(JwtUtil.REFRESH_TOKEN_HEADER) String refreshToken) {
+        AuthResponse.Reissue response = authService.reissue(refreshToken);
+        return ApiResponse.createSuccess(HttpStatus.OK.value(), "토큰 재발급 성공", response);
     }
 }

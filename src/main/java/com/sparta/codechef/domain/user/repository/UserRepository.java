@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.user.repository;
 
 import com.sparta.codechef.domain.user.entity.User;
+import java.time.LocalDate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,7 +18,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     boolean existsByEmail(String email);
 
     @Modifying
-    @Query("UPDATE User u SET u.isAttended = false")
+    @Query("UPDATE User u SET u.isAttended = false WHERE u.isAttended = true ")
     void resetIsAttend();
 
     @Query("SELECT count(u) FROM User u WHERE u.chatRoom.id = :chatRoomId")
@@ -25,4 +26,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
 
     @Query("SELECT exists(SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId)")
     boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
+
+    @Modifying
+    @Query("UPDATE User u SET u.point = GREATEST(CAST(u.point * 0.9 AS integer), 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
+    void decreaseAutomatically(LocalDate date,LocalDate today);
+
 }
