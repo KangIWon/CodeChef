@@ -2,12 +2,10 @@ package com.sparta.codechef.domain.chat.entity;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
-import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDateTime;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 
 @Getter
@@ -29,19 +27,13 @@ public class ChatRoom {
     private User user; // 방장
 
     public void updateRoomInfo(String title, String password, Integer maxParticipants) {
-        if (title != null && !title.isBlank()) {
+        if (title != null) {
             this.title = title;
         }
 
-        if (password != null && !password.isBlank()) {
-            this.password = password;
-        }
+        this.password = password;
 
         if (maxParticipants != null) {
-            if (maxParticipants < 2 || maxParticipants > 100) {
-                throw new ApiException(ErrorStatus.BAD_REQUEST_MAX_PARTICIPANTS);
-            }
-
             this.maxParticipants = maxParticipants;
         }
     }
