@@ -25,4 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
 
     @Query("SELECT exists(SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId)")
     boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
+
+    @Query("SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId")
+    Optional<User> findChatRoomUser(Long userId, Long chatRoomId);
 }
