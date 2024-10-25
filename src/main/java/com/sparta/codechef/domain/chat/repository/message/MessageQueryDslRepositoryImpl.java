@@ -31,7 +31,10 @@ public class MessageQueryDslRepositoryImpl implements MessageQueryDslRepository 
 
                 ))
                 .from(message1)
-                .where(message1.chatRoom.id.eq(chatRoomId))
+                .where(
+                        message1.chatRoom.id.eq(chatRoomId)
+                                .and(message1.isDeleted.isFalse())
+                )
                 .fetch();
     }
 }
