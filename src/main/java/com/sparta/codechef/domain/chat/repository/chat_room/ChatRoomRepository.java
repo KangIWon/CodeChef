@@ -13,4 +13,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatR
 
     @Query("SELECT c FROM ChatRoom c WHERE c.id = :chatRoomId AND c.user.id = :userId")
     Optional<ChatRoom> findByIdAndUser(Long chatRoomId, Long userId);
+
+    @Query("SELECT exists(SELECT c FROM ChatRoom c WHERE c.id = :chatRoomId AND c.user.id = :userId AND c.isDeleted = false)")
+    boolean existsByIdAndUserId(Long chatRoomId, Long userId);
+
+    @Query("SELECT c FROM ChatRoom c WHERE c.id = :chatRoomId AND c.isDeleted = false")
+    Optional<ChatRoom> findExistChatRoomById(Long chatRoomId);
 }
