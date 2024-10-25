@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("@boardService.isWriter(authentication.principal.getUserId(), #boardId)")
-public @interface AuthWriter {
+@PreAuthorize("@attachmentService.hasAccess(authentication.principal, #boardId)")
+public @interface AuthForBoard {
 }

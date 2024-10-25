@@ -22,6 +22,6 @@ public interface BoardRepository extends JpaRepository<Board, Long>, BoardQueryD
                             @Param("content") String content,
                             Pageable pageable);
 
-    @Query("SELECT EXISTS (SELECT b FROM Board b WHERE b.id = :boardId AND b.user.id = :userId)")
-    boolean existsByIdAndUserId(Long boardId, Long userId);
+    @Query("SELECT EXISTS(SELECT b FROM Board b WHERE b.id = :boardId AND b.user.id = :userId)")
+    boolean existsByIdAndUserId(Long userId, Long boardId);
 }
