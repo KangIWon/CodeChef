@@ -5,7 +5,6 @@ import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.boot.context.properties.bind.DefaultValue;
 
 
 @Getter
@@ -18,12 +17,15 @@ public class ChatRoom {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
     private String title;
     private String password;
     private int maxParticipants;
+    @Builder.Default
+    private boolean isDeleted = false;
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user; // 방장
 
     public void updateRoomInfo(String title, String password, Integer maxParticipants) {
@@ -38,9 +40,21 @@ public class ChatRoom {
         }
     }
 
+    public void updateHost(User newHost) {
+        this.user = newHost;
+    }
+
+    public void delete() {
+        this.isDeleted = true;
+    }
+
     public static class ChatRoomBuilder {
         public ChatRoomBuilder id(Long id) {
             throw new ApiException(ErrorStatus.ID_CANNOT_BE_SET);
+        }
+
+        public ChatRoomBuilder isDeleted(boolean isDeleted) {
+            throw new ApiException(ErrorStatus.IS_DELETED_CANNOT_BE_SET);
         }
     }
 }
