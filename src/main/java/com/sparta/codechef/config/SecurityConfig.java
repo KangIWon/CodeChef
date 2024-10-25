@@ -1,7 +1,6 @@
 package com.sparta.codechef.config;
 
 import com.sparta.codechef.common.enums.UserRole;
-
 import com.sparta.codechef.security.JwtSecurityFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -37,7 +36,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable) // BasicAuthenticationFilter 비활성화
                 .logout(AbstractHttpConfigurer::disable) // LogoutFilter 비활성화
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/reissue","/api/boards","/api/boards/search/**").permitAll()
+                        .requestMatchers("/auth/login", "/auth/signup","/api/boards","/api/boards/search/**").permitAll()
                         .requestMatchers("/test").hasAuthority(UserRole.Authority.ADMIN)
                         .anyRequest().authenticated()
                 )

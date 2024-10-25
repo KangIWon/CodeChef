@@ -31,16 +31,11 @@ public class Comment extends Timestamped {
     @Builder.Default
     private Boolean isAdopted = false;
 
-    public void update(String content)
-    {
+    public void update(String content) {
         this.content = content;
     }
-    public void isAdopted()
-    {
-
-            this.isAdopted = true;
-
+    public void isAdopted() {
+        this.isAdopted = true;
     }
-
 
 }
