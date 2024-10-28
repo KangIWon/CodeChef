@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "boards")
+@Table(name = "boards", indexes = {@Index(name = "boards_title_contents_partial_index", columnList = "title, contents")})
 public class Board extends Timestamped {
 
     @Id
