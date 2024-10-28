@@ -1,20 +1,30 @@
 package com.sparta.codechef.domain.chat.service;
 
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
+import com.sparta.codechef.domain.chat.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
+import com.sparta.codechef.domain.chat.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.dto.response.ChatRoomResponse;
 import com.sparta.codechef.domain.chat.entity.ChatRoom;
+import com.sparta.codechef.domain.chat.entity.Message;
 import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
+import com.sparta.codechef.domain.chat.repository.message.MessageRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
+import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +33,7 @@ public class ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
 
     /**
      * 채팅방 생성
@@ -31,26 +42,14 @@ public class ChatRoomService {
      * @return
      */
     @Transactional
-    public ChatRoomResponse createRoom(Long userId, ChatRoomRequest request) {
+    public ChatRoomResponse createRoom(Long userId, ChatRoomCreateRequest request) {
         User user = this.userRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
         );
 
-        String title = request.getTitle();
-        if (title == null || title.isBlank()) {
-            title = "채팅방";
-        }
-
-        Integer maxParticipants = request.getMaxParticipants();
-        if (maxParticipants == null) {
-            maxParticipants = 10;
-        } else if (maxParticipants < 2 || maxParticipants > 100){
-            throw new ApiException(ErrorStatus.BAD_REQUEST_MAX_PARTICIPANTS);
-        }
-
         ChatRoom chatRoom = ChatRoom.builder()
-                .title(title)
-                .maxParticipants(maxParticipants)
+                .title(request.getTitle())
+                .maxParticipants(request.getMaxParticipants())
                 .password(request.getPassword())
                 .user(user)
                 .build();
@@ -67,25 +66,22 @@ public class ChatRoomService {
      * @param size : 페이지 크기
      * @return
      */
-    public Page<ChatRoomResponse> getChatRooms(int page, int size) {
+    public Page<ChatRoomGetResponse> getChatRooms(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id"));
 
-        Page<ChatRoom> chatRoomList = this.chatRoomRepository.findAll(pageable);
-
-        return chatRoomList.map(ChatRoomResponse::new);
+        return this.chatRoomRepository.findAllChatRoom(pageable);
     }
 
 
     /**
      * 채팅방 정보 수정
-     * @param userId : 유저 id
      * @param chatRoomId : 채팅방 id
      * @param request : 채팅방 이름, 비밀번호, 최대 정원 정보가 담긴 DTO
      * @return
      */
     @Transactional
-    public ChatRoomResponse updateChatRoom(Long userId, Long chatRoomId, ChatRoomRequest request) {
-        ChatRoom chatRoom = this.chatRoomRepository.findByIdAndUser(chatRoomId, userId).orElseThrow(
+    public ChatRoomResponse updateChatRoom(Long chatRoomId, ChatRoomRequest request) {
+        ChatRoom chatRoom = this.chatRoomRepository.findExistChatRoomById(chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
@@ -133,30 +129,44 @@ public class ChatRoomService {
      * 채팅방 퇴장
      * @param userId : 유저 id
      * @param chatRoomId : 채팅방 id
-     * @return
      */
     @Transactional
     public void exitChatRoom(Long userId, Long chatRoomId) {
-        User user = this.userRepository.findById(userId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
+        User user = this.userRepository.findChatRoomUser(userId, chatRoomId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_IN_CHATROOM)
         );
 
-        if (user.getChatRoom() == null) {
-            throw new ApiException(ErrorStatus.NOT_IN_CHATROOM);
-        }
-
-        user.updateChatRoom(null);
-
-        this.userRepository.flush();
-
-        ChatRoom chatRoom = this.chatRoomRepository.findById(chatRoomId).orElseThrow(
+        ChatRoom chatRoom = this.chatRoomRepository.findExistChatRoomById(chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
-        int curParticipants = this.userRepository.countAllByChatRoom(chatRoomId);
+        boolean isHost = this.chatRoomRepository.existsByIdAndUserId(chatRoomId, userId);
 
-        if (curParticipants == 0) {
-            this.chatRoomRepository.delete(chatRoom);
+        if (isHost) {
+            Optional<User> nextHost = this.userRepository.findNextHost(chatRoomId, userId);
+
+            if (nextHost.isPresent()) {
+                chatRoom.updateHost(nextHost.get());
+            } else {
+                chatRoom.delete();
+                this.messageRepository.findAllMessagesByChatRoomId(chatRoomId).forEach(Message::delete);
+            }
         }
+
+        user.updateChatRoom(null);
+    }
+
+    // 방장 권한 체크용
+    public boolean hasAccess(AuthUser authUser, Long chatRoomId) {
+        boolean isHost = this.chatRoomRepository.existsByIdAndUserId(chatRoomId, authUser.getUserId());
+        boolean isAdmin = authUser.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals(UserRole.ROLE_ADMIN.name()));
+
+        if (!isHost && !isAdmin) {
+            throw new ApiException(ErrorStatus.NOT_CHATROOM_HOST);
+        }
+
+        return true;
     }
 }

@@ -1,7 +1,6 @@
 package com.sparta.codechef.domain.chat.entity;
 
 import com.sparta.codechef.common.ErrorStatus;
-import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -17,22 +16,27 @@ import java.time.LocalDateTime;
 @Builder(builderClassName = "MessageBuilder")
 @EntityListeners(AuditingEntityListener.class)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Message extends Timestamped {
+public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
     private String message;
 
+    @Builder.Default
+    private boolean isDeleted = false;
+
     @CreatedDate
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id", nullable = false)
     private ChatRoom chatRoom;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     public static class MessageBuilder {
@@ -43,5 +47,9 @@ public class Message extends Timestamped {
         public MessageBuilder createdAt(LocalDateTime createdAt) {
             throw new ApiException(ErrorStatus.CREATED_AT_CANNOT_BE_SET);
         }
+    }
+
+    public void delete() {
+        this.isDeleted = true;
     }
 }

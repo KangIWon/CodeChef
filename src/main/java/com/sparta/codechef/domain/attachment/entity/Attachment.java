@@ -3,7 +3,6 @@ package com.sparta.codechef.domain.attachment.entity;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.entity.Board;
-import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,9 +17,10 @@ public class Attachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     private String s3Url;
+    @Column(nullable = false, unique = true)
     private String s3Key;
-
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_id", nullable = false)
