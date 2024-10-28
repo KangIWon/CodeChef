@@ -1,11 +1,13 @@
 package com.sparta.codechef.domain.board.controller;
 
 import com.sparta.codechef.common.ApiResponse;
+import com.sparta.codechef.domain.attachment.annotation.AuthForBoard;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
 import com.sparta.codechef.domain.board.service.BoardService;
+import com.sparta.codechef.domain.chat.annotation.AuthHost;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -71,6 +73,7 @@ public class BoardController {
      * @param request : 게시판 수정에 필요한 request
      * @param boardId : 수정 하려는 게시물 번호
      * */
+    @AuthForBoard
     @PutMapping("/{boardId}") // 게시물 수정
     public ApiResponse modifiedBoard(@PathVariable Long boardId,
                                      @RequestPart BoardModifiedRequest request,
@@ -83,6 +86,7 @@ public class BoardController {
      * @param authUser : 로그인 유저 정보
      * @param boardId : 수정 하려는 게시물 번호
      **/
+    @AuthForBoard
     @DeleteMapping("/{boardId}") // 게시물 삭제
     public ApiResponse deletedBoard(@PathVariable Long boardId,
                                     @AuthenticationPrincipal AuthUser authUser) {
