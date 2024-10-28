@@ -1,7 +1,6 @@
 package com.sparta.codechef.config;
 
 import com.sparta.codechef.common.enums.UserRole;
-
 import com.sparta.codechef.security.JwtSecurityFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

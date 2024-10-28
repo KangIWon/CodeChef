@@ -2,7 +2,9 @@ package com.sparta.codechef.domain.chat.service;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
+import com.sparta.codechef.domain.chat.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
+import com.sparta.codechef.domain.chat.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.dto.response.ChatRoomResponse;
 import com.sparta.codechef.domain.chat.entity.ChatRoom;
 import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
@@ -11,8 +13,6 @@ import com.sparta.codechef.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -45,7 +45,7 @@ public class ChatRoomServiceTest {
         public void 유저ID로_유저를_찾지_못해_예외_발생() {
             // given
             Long userId = 1L;
-            ChatRoomRequest request = new ChatRoomRequest("chatRoom", null, 10);
+            ChatRoomCreateRequest request = new ChatRoomCreateRequest("chatRoom", null, 10);
 
             given(userRepository.findById(anyLong())).willReturn(Optional.empty());
 
@@ -54,26 +54,11 @@ public class ChatRoomServiceTest {
             assertEquals(ErrorStatus.NOT_FOUND_USER, exception.getErrorCode());
         }
 
-        @ParameterizedTest
-        @ValueSource(ints = {-1, 0, 1, 101, 102})
-        public void 채팅방_정원이_2명_미만이거나_100명_초과여서_예외_발생(int maxParticipants) {
-            // given
-            Long userId = 1L;
-            ChatRoomRequest request = new ChatRoomRequest("chatRoom", null, maxParticipants);
-
-            given(userRepository.findById(anyLong())).willReturn(Optional.of(spy(User.class)));
-
-
-            // when & then
-            ApiException exception = assertThrows(ApiException.class, () -> chatRoomService.createRoom(userId, request));
-            assertEquals(ErrorStatus.BAD_REQUEST_MAX_PARTICIPANTS, exception.getErrorCode());
-        }
-
         @Test
         public void 채팅방_생성_성공() {
             // given
             Long userId = 1L;
-            ChatRoomRequest request = new ChatRoomRequest("채팅방", "123", 2);
+            ChatRoomCreateRequest request = new ChatRoomCreateRequest("채팅방", "123", 2);
             User user = spy(User.class);
 
             given(userRepository.findById(anyLong())).willReturn(Optional.of(user));
@@ -99,18 +84,18 @@ public class ChatRoomServiceTest {
             int page = 0;
             int size = 10;
             Pageable pageable = PageRequest.of(page, size, Sort.by("id"));
-            Page<ChatRoom> chatRoomList = new PageImpl<>(List.of(spy(ChatRoom.class), spy(ChatRoom.class)), pageable, 2);
+            Page<ChatRoomGetResponse> chatRoomList = new PageImpl<>(List.of(spy(ChatRoomGetResponse.class), spy(ChatRoomGetResponse.class)), pageable, 2);
 
-            given(chatRoomRepository.findAll(any(Pageable.class))).willReturn(chatRoomList);
+            given(chatRoomRepository.findAllChatRoom(any(Pageable.class))).willReturn(chatRoomList);
 
             // when
-            Page<ChatRoomResponse> response = chatRoomService.getChatRooms(page, size);
+            Page<ChatRoomGetResponse> response = chatRoomService.getChatRooms(page, size);
 
             //then
-            verify(chatRoomRepository, times(1)).findAll(any(Pageable.class));
+            verify(chatRoomRepository, times(1)).findAllChatRoom(any(Pageable.class));
             assertInstanceOf(Page.class, response);
             response.getContent().forEach(item -> {
-                assertInstanceOf(ChatRoomResponse.class, item);
+                assertInstanceOf(ChatRoomGetResponse.class, item);
             });
         }
     }
@@ -127,7 +112,7 @@ public class ChatRoomServiceTest {
             given(chatRoomRepository.findByIdAndUser(anyLong(), anyLong())).willReturn(Optional.empty());
 
             // when & then
-            ApiException exception = assertThrows(ApiException.class, () -> chatRoomService.updateChatRoom(userId, chatRoomId, request));
+            ApiException exception = assertThrows(ApiException.class, () -> chatRoomService.updateChatRoom(chatRoomId, request));
             assertEquals(ErrorStatus.NOT_FOUND_CHATROOM, exception.getErrorCode());
         }
 
@@ -148,7 +133,7 @@ public class ChatRoomServiceTest {
             given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(chatRoom);
 
             // when
-            ChatRoomResponse response = chatRoomService.updateChatRoom(userId, chatRoomId, request);
+            ChatRoomResponse response = chatRoomService.updateChatRoom(chatRoomId, request);
 
             //then
             verify(chatRoomRepository, times(1)).findByIdAndUser(anyLong(), anyLong());

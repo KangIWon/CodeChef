@@ -66,6 +66,10 @@ public class MessageService {
      * @return
      */
     public List<MessageResponse> getMessages(Long userId, Long chatRoomId) {
+        this.chatRoomRepository.findExistChatRoomById(chatRoomId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
+        );
+
         boolean inChatRoom = this.userRepository.existsUserByIdAndChatRoomId(userId, chatRoomId);
 
         if (!inChatRoom) {

@@ -7,10 +7,12 @@ import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
 import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
+import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,48 +32,16 @@ public class AttachmentService {
     @Value("${s3.bucket}")
     private String bucketName;
 
-
     /**
      * 첨부파일 추가
-     * @param userId : 유저 ID
      * @param boardId : 게시글 ID
      * @param fileList : 첨부파일 리스트
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
-    public List<AttachmentResponse> uploadFiles(Long userId, Long boardId, List<MultipartFile> fileList) {
-        Board board = this.boardRepository.findByIdAndUserId(boardId, userId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_BOARD_WRITER)
-        );
+    public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
+        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
 
         return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
-    }
-
-
-    /**
-     * 단일 첨부파일 업로드
-     * @param boardId : 게시글 ID
-     * @param file : 첨부파일
-     * @return 첨부파일 정보(파일명, URL)
-     */
-    public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
-        String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
-
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        metadata.setContentType(file.getContentType());
-
-        try {
-
-            amazonS3.putObject(bucketName, s3Key, file.getInputStream(), metadata);
-
-        } catch (IOException e) {
-            throw new ApiException(ErrorStatus.S3_UPLOAD_FILE_FAILED);
-        }
-
-        return new AttachmentResponse(
-                file.getOriginalFilename(),
-                amazonS3.getUrl(bucketName, s3Key).toString()
-        );
     }
 
 
@@ -87,63 +57,14 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
         };
 
-        String path = this.getPath(boardId);
+        return this.getKeyListFromS3(boardId).stream().map(key -> {
+            String s3Url = amazonS3Client.getUrl(bucketName, key).toString();
 
-        ListObjectsV2Request request = new ListObjectsV2Request()
-                .withBucketName(bucketName)
-                .withPrefix(path);
-
-        ListObjectsV2Result result = amazonS3.listObjectsV2(request);
-
-        return result.getObjectSummaries().stream()
-                .map(S3ObjectSummary::getKey)
-                .map(key -> {
-                    String s3Url = amazonS3.getUrl(bucketName, key).toString();
-
-                    return new AttachmentResponse(
-                            this.getOriginalFileName(boardId, key),
-                            s3Url
-                    );
-                }).toList();
-    }
-
-    /**
-     * 첨부파일 수정
-     * @param boardId : 게시글 ID
-     * @param fileList : 첨부 파일 리스트
-     * @return 첨부파일 정보 리스트
-     */
-    public List<AttachmentResponse> updateFiles(Long boardId, List<MultipartFile> fileList) {
-        String path = this.getPath(boardId);
-
-        ListObjectsV2Request request = new ListObjectsV2Request()
-                .withBucketName(bucketName)
-                .withPrefix(path);
-
-        ListObjectsV2Result result = amazonS3.listObjectsV2(request);
-
-        List<String> keyList = result.getObjectSummaries().stream()
-                .map(S3ObjectSummary::getKey)
-                .toList();
-
-        List<AttachmentResponse> response = fileList.stream().map(file -> {
-            String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
-
-            boolean isExist = amazonS3Client.doesObjectExist(bucketName, s3Key);
-
-            if (isExist) {
-                keyList.remove(s3Key);
-            } else {
-                this.uploadFile(boardId, file);
-            }
-
-            return new AttachmentResponse(this.getOriginalFileName(boardId, s3Key), amazonS3.getUrl(bucketName, s3Key).toString());
+            return new AttachmentResponse(
+                    this.getOriginalFileName(boardId, key),
+                    s3Url
+            );
         }).toList();
-
-        keyList.forEach(this::deleteFile);
-
-
-        return response;
     }
 
 
@@ -152,7 +73,52 @@ public class AttachmentService {
      * @param boardId : 게시글 ID
      */
     public void deleteFiles(Long boardId) {
+        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
+    }
 
+
+    // S3 요청 메서드
+    /**
+     * S3에 업로드된 게시물의 첨부파일 key 리스트 조회
+     * @param boardId : 게시물 ID
+     * @return key 리스트
+     */
+    public List<String> getKeyListFromS3(Long boardId) {
+        ListObjectsV2Request request = new ListObjectsV2Request()
+                .withBucketName(bucketName)
+                .withPrefix(this.getPath(boardId));
+
+        ListObjectsV2Result result = amazonS3Client.listObjectsV2(request);
+
+        return result.getObjectSummaries().stream()
+                .map(S3ObjectSummary::getKey)
+                .toList();
+    }
+
+    /**
+     * 단일 첨부파일 업로드
+     * @param boardId : 게시글 ID
+     * @param file : 첨부파일
+     * @return 첨부파일 정보(파일명, URL)
+     */
+    public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
+        String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
+
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(file.getSize());
+        metadata.setContentType(file.getContentType());
+
+        try {
+            amazonS3Client.putObject(bucketName, s3Key, file.getInputStream(), metadata);
+
+        } catch (IOException e) {
+            throw new ApiException(ErrorStatus.S3_UPLOAD_FILE_FAILED);
+        }
+
+        return new AttachmentResponse(
+                file.getOriginalFilename(),
+                amazonS3Client.getUrl(bucketName, s3Key).toString()
+        );
     }
 
     /**
@@ -161,10 +127,25 @@ public class AttachmentService {
      */
     public void deleteFile(String key) {
         try {
-            amazonS3.deleteObject(bucketName, key);
+            amazonS3Client.deleteObject(bucketName, key);
         } catch (Exception e) {
             throw new ApiException(ErrorStatus.DELETE_FILE_FAILED);
         }
+    }
+
+
+    // GETTER 메서드
+    /**
+     * S3 파일 저장 경로 Getter
+     * @param boardId : 게시물 ID
+     * @return "/board/{boardId}/"
+     */
+    private String getPath(Long boardId) {
+        return new StringBuffer()
+                .append("/board")
+                .append(boardId)
+                .append("/")
+                .toString();
     }
 
 
@@ -182,19 +163,6 @@ public class AttachmentService {
     }
 
     /**
-     * S3 파일 저장 경로 Getter
-     * @param boardId : 게시물 ID
-     * @return "/board/{boardId}/"
-     */
-    private String getPath(Long boardId) {
-        return new StringBuffer()
-                .append("/board")
-                .append(boardId)
-                .append("/")
-                .toString();
-    }
-
-    /**
      * 조회한 key에서 파일명.확장자 Getter
      * @param boardId : 게시물 ID
      * @param key : S3 파일 저장 경로/파일명.확장자
@@ -205,4 +173,21 @@ public class AttachmentService {
     }
 
 
+    // @AuthWriter 에서 사용하는 메서드
+    /**
+     * 게시물의 작성자 여부 조회
+     * @param authUser : 인증 유저
+     * @param boardId : 게시물 ID
+     * @return
+     */
+    public boolean hasAccess(AuthUser authUser, Long boardId) {
+        boolean isWriter = authUser.getAuthorities().contains(UserRole.ROLE_ADMIN);
+        isWriter = isWriter || this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+
+        if (!isWriter) {
+            throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
+        }
+
+        return isWriter;
+    }
 }
