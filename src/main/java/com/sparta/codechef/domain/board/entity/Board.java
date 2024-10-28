@@ -43,8 +43,6 @@ public class Board extends Timestamped {
     @Column(name = "framework", nullable = false)
     private Framework framework;
 
-    @OneToMany(mappedBy = "board")
-    private List<Comment> comments = new ArrayList<>();
 
 
     public void BoardModify(String title,
