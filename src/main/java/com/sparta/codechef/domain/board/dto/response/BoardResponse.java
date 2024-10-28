@@ -1,14 +1,8 @@
 package com.sparta.codechef.domain.board.dto.response;
 
 import com.sparta.codechef.common.enums.Framework;
-import com.sparta.codechef.common.enums.Language;
-import com.sparta.codechef.domain.board.entity.Board;
-import com.sparta.codechef.domain.comment.dto.CommentResponse;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Getter
 @NoArgsConstructor
