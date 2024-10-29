@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -33,6 +32,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -100,13 +100,20 @@ public class CommentService {
                 .anyMatch(Comment::getIsAdopted)) {
             throw new ApiException(ErrorStatus.ALREADY_ADOPTED_COMMENT);
         }
+      
         Comment comment = commentRepository.findById(commentId).orElseThrow(()
                 -> new CommentNotFoundException(ErrorStatus.NOT_FOUND_COMMENT));
         comment.getUser().addPointToCommentUser();
+
         comment.isAdopted();
         commentRepository.save(comment);
         pointsAreSavedInRedis(comment.getUser());
 
+        Long id = comment.getUser().getId();
+        Integer point = comment.getUser().getPoint();
+        String redisKey = comment.getUser().checkRedisKey(comment.getUser());
+        redisTemplate.opsForZSet().add(redisKey, id, point);
+      
         return null;
     }
 
