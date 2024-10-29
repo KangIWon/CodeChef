@@ -58,4 +58,4 @@ jobs:
             docker container stop my-app
             docker image prune -a -f
             docker pull kangiwon/my-app:latest
-            docker run -d --rm -p 8080:8080 --name my-app kangiwon/my-app:latest
+            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app kangiwon/my-app:latest
