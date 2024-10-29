@@ -1,19 +1,15 @@
 package com.sparta.codechef.domain.chat.v2.config;
 
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
-import com.sparta.codechef.domain.chat.v2.repository.WSWSChatUserRepository;
 import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import javax.swing.text.html.Option;
-import java.io.IOException;
 import java.util.Optional;
 
 @Slf4j(topic = "WSChatHandler")
