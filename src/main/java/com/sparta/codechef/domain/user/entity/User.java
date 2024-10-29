@@ -114,4 +114,10 @@ public class User extends Timestamped {
     public void updateChatRoom(ChatRoom chatRoom) {
         this.chatRoom = chatRoom;
     }
+
+    public String checkRedisKey(User user) {
+             return user.getOrganization() == Organization.EMPLOYED
+                ? "employed:ranking:realTime"
+                : "unemployed:ranking:realTime";
+    }
 }
