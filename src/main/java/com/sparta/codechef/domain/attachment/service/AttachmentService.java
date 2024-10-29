@@ -181,7 +181,7 @@ public class AttachmentService {
      * @return
      */
     public boolean hasAccess(AuthUser authUser, Long boardId) {
-        boolean isWriter = authUser.getAuthorities().contains(UserRole.ROLE_ADMIN);
+        boolean isWriter = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
         isWriter = isWriter || this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
 
         if (!isWriter) {
