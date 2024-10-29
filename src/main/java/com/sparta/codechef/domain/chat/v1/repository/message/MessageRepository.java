@@ -1,6 +1,6 @@
-package com.sparta.codechef.domain.chat.repository.message;
+package com.sparta.codechef.domain.chat.v1.repository.message;
 
-import com.sparta.codechef.domain.chat.entity.Message;
+import com.sparta.codechef.domain.chat.v1.entity.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

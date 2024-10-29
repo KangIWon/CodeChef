@@ -1,9 +1,8 @@
-package com.sparta.codechef.domain.chat.dto.request;
+package com.sparta.codechef.domain.chat.v1.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 
 @Getter

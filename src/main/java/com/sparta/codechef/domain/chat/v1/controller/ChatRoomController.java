@@ -1,12 +1,12 @@
-package com.sparta.codechef.domain.chat.controller;
+package com.sparta.codechef.domain.chat.v1.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.chat.annotation.AuthHost;
-import com.sparta.codechef.domain.chat.dto.request.ChatRoomCreateRequest;
-import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
-import com.sparta.codechef.domain.chat.dto.response.ChatRoomGetResponse;
-import com.sparta.codechef.domain.chat.dto.response.ChatRoomResponse;
-import com.sparta.codechef.domain.chat.service.ChatRoomService;
+import com.sparta.codechef.domain.chat.v1.annotation.AuthHost;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
+import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
+import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+import com.sparta.codechef.domain.chat.v1.service.ChatRoomService;
 import com.sparta.codechef.security.AuthUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -85,7 +85,7 @@ public class ChatRoomController {
             @AuthenticationPrincipal AuthUser authUser,
             @PathVariable Long chatRoomId
     ) {
-        this.chatRoomService.enterChatRoom(authUser.getUserId(), chatRoomId);
+        this.chatRoomService.enterChatRoom(chatRoomId, authUser.getUserId());
 
         return ApiResponse.ok(
                 "채팅방에 입장하셨습니다.",
@@ -105,7 +105,7 @@ public class ChatRoomController {
             @AuthenticationPrincipal AuthUser authUser,
             @PathVariable Long chatRoomId
     ) {
-        this.chatRoomService.exitChatRoom(authUser.getUserId(), chatRoomId);
+        this.chatRoomService.exitChatRoom(chatRoomId, authUser.getUserId());
 
         return ApiResponse.ok(
                 "채팅방에서 퇴장하셨습니다.",

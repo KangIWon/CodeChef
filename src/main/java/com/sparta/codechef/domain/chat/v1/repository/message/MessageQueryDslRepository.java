@@ -1,6 +1,6 @@
-package com.sparta.codechef.domain.chat.repository.message;
+package com.sparta.codechef.domain.chat.v1.repository.message;
 
-import com.sparta.codechef.domain.chat.dto.response.MessageResponse;
+import com.sparta.codechef.domain.chat.v1.dto.response.MessageResponse;
 
 import java.util.List;
 

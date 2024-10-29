@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.chat.dto.request;
+package com.sparta.codechef.domain.chat.v1.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

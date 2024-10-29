@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.chat.annotation;
+package com.sparta.codechef.domain.chat.v1.annotation;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 

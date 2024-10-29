@@ -1,9 +1,9 @@
-package com.sparta.codechef.domain.chat.controller;
+package com.sparta.codechef.domain.chat.v1.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.chat.dto.request.MessageRequest;
-import com.sparta.codechef.domain.chat.dto.response.MessageResponse;
-import com.sparta.codechef.domain.chat.service.MessageService;
+import com.sparta.codechef.domain.chat.v1.dto.request.MessageRequest;
+import com.sparta.codechef.domain.chat.v1.dto.response.MessageResponse;
+import com.sparta.codechef.domain.chat.v1.service.MessageService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

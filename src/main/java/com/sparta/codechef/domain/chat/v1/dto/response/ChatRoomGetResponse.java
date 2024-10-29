@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.chat.dto.response;
+package com.sparta.codechef.domain.chat.v1.dto.response;
 
 import lombok.Getter;
 

@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.chat.entity;
+package com.sparta.codechef.domain.chat.v1.entity;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
