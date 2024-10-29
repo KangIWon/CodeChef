@@ -10,11 +10,12 @@ import com.sparta.codechef.domain.board.dto.response.BoardResponse;
 import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.domain.comment.dto.CommentResponse;
+import com.sparta.codechef.domain.comment.entity.Comment;
+import com.sparta.codechef.domain.comment.repository.CommentRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.engine.jdbc.Size;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,7 @@ public class BoardService {
 
     private final BoardRepository boardRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
     @Transactional
     public Void createBoard(BoardCreatedRequest request, AuthUser authUser) {
@@ -68,6 +69,10 @@ public class BoardService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
+        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
+        );
+
 
         return new BoardDetailResponse(savedBoard.getId(),
                 savedBoard.getUser().getId(),
@@ -75,7 +80,7 @@ public class BoardService {
                 savedBoard.getContents(),
                 savedBoard.getLanguage().toString(),
                 savedBoard.getFramework(),
-                savedBoard.getComments().stream().map(comment -> new CommentResponse(
+                commentList.stream().map(comment -> new CommentResponse(
                         comment.getId(),
                         comment.getContent(),
                         comment.getUser().getId(),
