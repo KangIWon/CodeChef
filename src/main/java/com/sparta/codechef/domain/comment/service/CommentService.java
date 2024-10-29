@@ -34,7 +34,6 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private final RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
