@@ -61,7 +61,9 @@ public enum ErrorStatus implements BaseCode {
     ALREADY_ASSIGNED_USER_LANGUAGE(HttpStatus.CONFLICT, 409, "유저의 언어가 중복됩니다."),
     NOT_FOUND_USER_LANGUAGE(HttpStatus.NOT_FOUND,400, "유저의 프레임워크를 찾지 못했습니다."),
 
-
+    //
+    JSON_CHANGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식으로 바꾸는 것을 실패 했습니다."),
+    JSON_READ_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식을 읽는 것을 실패 했습니다."),
 
     // 빌더 관련 예외
     ID_CANNOT_BE_SET(HttpStatus.BAD_REQUEST, 400, "ID 필드는 설정할 수 없습니다."),
