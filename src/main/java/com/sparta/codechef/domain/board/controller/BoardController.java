@@ -7,7 +7,7 @@ import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
 import com.sparta.codechef.domain.board.service.BoardService;
-import com.sparta.codechef.domain.chat.annotation.AuthHost;
+
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +28,7 @@ public class BoardController {
      * @param request : 게시판 생성에 필요한 request
      * */
     @PostMapping// 게시판 생성
-    public ApiResponse createBoard(@RequestPart BoardCreatedRequest request,
+    public ApiResponse createBoard(@RequestBody BoardCreatedRequest request,
                                    @AuthenticationPrincipal AuthUser authUser) {
 
         return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", boardService.createBoard(request, authUser));
@@ -76,7 +76,7 @@ public class BoardController {
     @AuthForBoard
     @PutMapping("/{boardId}") // 게시물 수정
     public ApiResponse modifiedBoard(@PathVariable Long boardId,
-                                     @RequestPart BoardModifiedRequest request,
+                                     @RequestBody BoardModifiedRequest request,
                                      @AuthenticationPrincipal AuthUser authUser) {
         return ApiResponse.ok(boardId +"번 게시물 수정",boardService.modifiedBoard(boardId, request, authUser));
     }

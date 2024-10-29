@@ -86,7 +86,7 @@ public class CommentService {
 
     @Transactional
     public Void adoptedComment(AuthUser authUser, Long boardId, Long commentId){
-        Board board = boardRepository.findById(boardId).orElseThrow(
+        boardRepository.findById(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
