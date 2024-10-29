@@ -1,15 +1,14 @@
-package com.sparta.codechef.domain.chat.repository.message;
+package com.sparta.codechef.domain.chat.v1.repository.message;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.sparta.codechef.domain.chat.dto.response.MessageResponse;
+import com.sparta.codechef.domain.chat.v1.dto.response.MessageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.sparta.codechef.domain.chat.entity.QMessage.message1;
-
+import static com.sparta.codechef.domain.chat.v1.entity.QMessage.message;
 
 @Repository
 @RequiredArgsConstructor
@@ -19,21 +18,20 @@ public class MessageQueryDslRepositoryImpl implements MessageQueryDslRepository 
 
     @Override
     public List<MessageResponse> findAllByChatRoomId(Long chatRoomId) {
-
         return jpaQueryFactory.select(
                 Projections.constructor(
                         MessageResponse.class,
-                        message1.id,
-                        message1.message,
-                        message1.user.id,
-                        message1.user.email,
-                        message1.createdAt
+                        message.id,
+                        message.content,
+                        message.user.id,
+                        message.user.email,
+                        message.createdAt
 
                 ))
-                .from(message1)
+                .from(message)
                 .where(
-                        message1.chatRoom.id.eq(chatRoomId)
-                                .and(message1.isDeleted.isFalse())
+                        message.chatRoom.id.eq(chatRoomId)
+                                .and(message.isDeleted.isFalse())
                 )
                 .fetch();
     }
