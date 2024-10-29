@@ -20,25 +20,14 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 400 private_key.pem
 
-      - name: Create .env file with secrets
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          S3_CREDENTIALS_ACCESS_KEY: ${{ secrets.S3_CREDENTIALS_ACCESS_KEY }}
-          S3_CREDENTIALS_SECRET_KEY: ${{ secrets.S3_CREDENTIALS_SECRET_KEY }}
-          S3_CREDENTIALS_REGION: ${{ secrets.S3_CREDENTIALS_REGION }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-        run: |
-          echo "DB_URL=${DB_URL}" >> .env
-          echo "DB_USERNAME=${DB_USERNAME}" >> .env
-          echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
-          echo "JWT_SECRET_KEY=${JWT_SECRET_KEY}" >> .env
-          echo "S3_CREDENTIALS_ACCESS_KEY=${S3_CREDENTIALS_ACCESS_KEY}" >> .env
-          echo "S3_CREDENTIALS_SECRET_KEY=${S3_CREDENTIALS_SECRET_KEY}" >> .env
-          echo "S3_CREDENTIALS_REGION=${S3_CREDENTIALS_REGION}" >> .env
-          echo "S3_BUCKET=${S3_BUCKET}" >> .env
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Gradle
+        run: ./gradlew build
 
       - name: Build Docker image
         run: docker build -t my-app:latest .
