@@ -19,20 +19,11 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 @RequiredArgsConstructor
 public class ChatEventListener {
 
-    private final WSChatService WSChatService;
-
     // 웹 소켓 연결 요청 처리
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
-
-        AuthUser authUser = (AuthUser) SecurityContextHolder.getContext().getAuthentication();
-
-        if (authUser!= null) {
-            WSChatUser chatUser = WSChatUser.fromAuthUser(authUser);
-            this.WSChatService.connectChatUser(chatUser);
-        }
 
         log.info("WebSocket connected, sessionId : {}", sessionId);
     }
@@ -61,13 +52,6 @@ public class ChatEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
-
-        AuthUser authUser = (AuthUser) SecurityContextHolder.getContext().getAuthentication();
-
-        if (authUser!= null) {
-            WSChatUser chatUser = WSChatUser.fromAuthUser(authUser);
-            this.WSChatService.disconnectChatUser(chatUser);
-        }
 
         log.info("WebSocket disconnected, sessionId : {}", sessionId);
     }
