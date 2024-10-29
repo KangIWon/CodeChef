@@ -30,4 +30,25 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
                         .fetchFirst()
         );
     }
+
+
+    @Override
+    public boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId) {
+        Long countUser = jpaQueryFactory
+                .select(
+                        user.count()
+                )
+                .from(user)
+                .where(
+                        user.id.eq(userId)
+                                .and(user.chatRoom.id.eq(chatRoomId))
+                )
+                .fetchFirst();
+
+        if (countUser == null) {
+            return false;
+        }
+
+        return countUser == 1L;
+    }
 }
