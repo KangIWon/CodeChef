@@ -40,8 +40,8 @@ public enum ErrorStatus implements BaseCode {
     NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "중복된 이름의 첨부파일이 존재합니다."),
     MAX_UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "단일 첨부파일은 최대 5MB까지 업로드 가능합니다."),
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
-    S3_UPLOAD_FILE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "S3 버킷에 파일 업로드를 실패하였습니다."),
-    DELETE_FILE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "S3 버킷에서 파일 삭제"),
+    FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
+    FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
@@ -74,6 +74,8 @@ public enum ErrorStatus implements BaseCode {
     ROOM_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, 409, "채팅방 정원이 초과되었습니다."),
     NOT_IN_CHATROOM(HttpStatus.CONFLICT, 409, "현재 채팅방에 접속해 있지 않습니다."),
     NOT_CHATROOM_HOST(HttpStatus.UNAUTHORIZED, 401, "채팅방 방장이 아닙니다."),
+    FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),
+    NOT_FOUND_CHAT_USER(HttpStatus.NOT_FOUND, 404, "채팅에 접속되어 있지 않습니다."),
 
     // DB 관련 예외
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),

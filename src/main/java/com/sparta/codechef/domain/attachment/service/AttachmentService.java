@@ -10,7 +10,6 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
-import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
@@ -112,7 +111,7 @@ public class AttachmentService {
             amazonS3Client.putObject(bucketName, s3Key, file.getInputStream(), metadata);
 
         } catch (IOException e) {
-            throw new ApiException(ErrorStatus.S3_UPLOAD_FILE_FAILED);
+            throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
         }
 
         return new AttachmentResponse(
@@ -129,7 +128,7 @@ public class AttachmentService {
         try {
             amazonS3Client.deleteObject(bucketName, key);
         } catch (Exception e) {
-            throw new ApiException(ErrorStatus.DELETE_FILE_FAILED);
+            throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
         }
     }
 
