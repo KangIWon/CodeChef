@@ -72,6 +72,10 @@ public class User extends Timestamped {
         this.point += 100; // 포인트 증가
     }
 
+    public void eventAddPoint() {
+        this.point += 1000; // 포인트 증가
+    }
+
     // 마지막 출석체크날로부터 일주일 지나면 포인트 10%감소한 값 바꿔주는 메서드
     public void updatePoint(Integer point) {
         this.point = point;

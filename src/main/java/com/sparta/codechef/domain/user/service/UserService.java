@@ -58,4 +58,5 @@ public class UserService {
         Integer point = user.getPoint();
         return new UserPoint(point);
     }
+
 }

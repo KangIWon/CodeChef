@@ -39,6 +39,7 @@ public class Board extends Timestamped {
     private Framework framework;
 
 
+
     public void BoardModify(String title,
                             String contents,
                             Language language,
