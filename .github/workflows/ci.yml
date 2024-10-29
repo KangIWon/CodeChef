@@ -47,7 +47,7 @@ jobs:
         run: docker push kangiwon/my-app:latest
 
       - name: ssh to ec2
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.1.0
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }} # 내가 변수로 저장한 pem key
           host: ${{ secrets.EC2_HOST }} # 내가 변수로 저장한 ip
