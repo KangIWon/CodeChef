@@ -52,6 +52,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }} # 내가 변수로 저장한 pem key
           host: ${{ secrets.EC2_HOST }} # 내가 변수로 저장한 ip
           username: ${{ secrets.EC2_USER }} # 내가 변수로 저장한 User
+          port: 22
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
             docker pull kangiwon/my-app:latest
