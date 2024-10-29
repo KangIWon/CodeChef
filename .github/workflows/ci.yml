@@ -48,7 +48,7 @@ jobs:
 
       - name: Load Docker image and run container on EC2
         run: |
-          ssh -i private_key.pem ec2-user@43.202.17.26
+          ssh -i ${{SSH_PRIVATE_KEY}} ec2-user@43.202.17.26
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
           docker pull ${{ secrets.DOCKER_USERNAME }}/my-app:latest
           docker run -d --name my-app --env-file ~/project/.env -p 80:80 my-app:latest
