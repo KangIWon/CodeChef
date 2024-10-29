@@ -2,7 +2,7 @@ name: Deploy Docker App to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 jobs:
   deploy-to-ec2:
