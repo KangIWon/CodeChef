@@ -48,9 +48,8 @@ jobs:
 
       - name: Load Docker image and run container on EC2
         run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
-          docker load -i ~/my-app.tar
-          docker stop my-app || true
-          docker rm my-app || true
+          ssh -i private_key.pem ec2-user@43.202.17.26
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker pull ${{ secrets.DOCKER_USERNAME }}/my-app:latest
           docker run -d --name my-app --env-file ~/project/.env -p 80:80 my-app:latest
           EOF
