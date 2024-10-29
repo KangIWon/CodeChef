@@ -56,7 +56,7 @@ jobs:
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
             docker container stop my-app
-            docker container prune
+            docker container prune -f
             docker image prune -a -f
             docker pull kangiwon/my-app:latest
             docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app kangiwon/my-app:latest
