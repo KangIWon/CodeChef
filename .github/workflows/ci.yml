@@ -46,7 +46,6 @@ jobs:
       - name: Push the Docker image
         run: docker push kangiwon/my-app:latest
 
-      - uses: actions/checkout@v3
       - name: ssh to ec2
         uses: appleboy/ssh-action@master
         with:
