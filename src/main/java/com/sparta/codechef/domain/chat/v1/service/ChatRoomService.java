@@ -1,16 +1,16 @@
-package com.sparta.codechef.domain.chat.service;
+package com.sparta.codechef.domain.chat.v1.service;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
-import com.sparta.codechef.domain.chat.dto.request.ChatRoomCreateRequest;
-import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
-import com.sparta.codechef.domain.chat.dto.response.ChatRoomGetResponse;
-import com.sparta.codechef.domain.chat.dto.response.ChatRoomResponse;
-import com.sparta.codechef.domain.chat.entity.ChatRoom;
-import com.sparta.codechef.domain.chat.entity.Message;
-import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
-import com.sparta.codechef.domain.chat.repository.message.MessageRepository;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
+import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
+import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+import com.sparta.codechef.domain.chat.v1.entity.ChatRoom;
+import com.sparta.codechef.domain.chat.v1.entity.Message;
+import com.sparta.codechef.domain.chat.v1.repository.chat_room.ChatRoomRepository;
+import com.sparta.codechef.domain.chat.v1.repository.message.MessageRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
@@ -99,11 +99,11 @@ public class ChatRoomService {
 
     /**
      * 채팅방 입장
-     * @param userId : 유저 id
      * @param chatRoomId : 채팅방 id
+     * @param userId : 유저 id
      */
     @Transactional
-    public void enterChatRoom(Long userId, Long chatRoomId) {
+    public void enterChatRoom(Long chatRoomId, Long userId) {
         User user = this.userRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
         );
@@ -112,7 +112,7 @@ public class ChatRoomService {
             throw new ApiException(ErrorStatus.ALREADY_IN_CHATROOM);
         }
 
-        ChatRoom chatRoom = this.chatRoomRepository.findById(chatRoomId).orElseThrow(
+        ChatRoom chatRoom = this.chatRoomRepository.findExistChatRoomById(chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
@@ -127,11 +127,11 @@ public class ChatRoomService {
 
     /**
      * 채팅방 퇴장
-     * @param userId : 유저 id
      * @param chatRoomId : 채팅방 id
+     * @param userId : 유저 id
      */
     @Transactional
-    public void exitChatRoom(Long userId, Long chatRoomId) {
+    public void exitChatRoom(Long chatRoomId, Long userId) {
         User user = this.userRepository.findChatRoomUser(userId, chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_IN_CHATROOM)
         );
