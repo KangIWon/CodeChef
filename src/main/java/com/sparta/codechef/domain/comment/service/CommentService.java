@@ -15,9 +15,9 @@ import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
@@ -29,6 +29,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
@@ -89,13 +90,16 @@ public class CommentService {
         if(comment.getIsAdopted()){
             throw new ApiException(ErrorStatus.ALREADY_ADOPTED_COMMENT);
         }
-
-
         comment.isAdopted();
         commentRepository.save(comment);
 
         comment.getUser().addPointToCommentUser();
         userRepository.save(user);
+
+        Long id = comment.getUser().getId();
+        Integer point = comment.getUser().getPoint();
+        String redisKey = comment.getUser().checkRedisKey(comment.getUser());
+        redisTemplate.opsForZSet().add(redisKey, id, point);
         return null;
     }
 }

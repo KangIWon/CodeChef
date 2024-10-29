@@ -8,7 +8,9 @@ import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
 
     @Scheduled(cron = "0 0 0 * * *")
@@ -33,7 +36,11 @@ public class UserService {
     public void decreasePointsAutomatically() {
         LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
         LocalDate today = LocalDate.now();
-        userRepository.decreaseAutomatically(sevenDaysAgo, today);
+        List<User> users = userRepository.decreaseAutomatically(sevenDaysAgo, today);
+        for (User user : users) {
+            String redisKey = user.checkRedisKey(user);
+            redisTemplate.opsForZSet().add(redisKey, user.getId(), user.getPoint());
+        }
     }
 
     @Transactional
@@ -48,6 +55,9 @@ public class UserService {
         user.updateLastAttendDate();
         user.addPoint();
         userRepository.save(user);
+
+        String redisKey = user.checkRedisKey(user);
+        redisTemplate.opsForZSet().add(redisKey, user.getId(), user.getPoint());
         return null;
     }
 
