@@ -69,3 +69,4 @@ public class UserService {
         return new UserPoint(point);
     }
 }
+

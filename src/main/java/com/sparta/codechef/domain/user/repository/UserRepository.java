@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Repository
@@ -32,10 +33,14 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Query("UPDATE User u SET u.point = GREATEST(CAST(u.point * 0.9 AS integer), 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
     List<User> decreaseAutomatically(LocalDate date,LocalDate today);
 
+
     @Query("SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId")
     Optional<User> findChatRoomUser(Long userId, Long chatRoomId);
 
     @Modifying
     @Query("UPDATE User u SET u.point = 0")
     void resetUserPoint();
+  
+    @Query("UPDATE User u SET u.point = u.point + :point WHERE u.id = :id")
+    void updatePoints(@Param("point") int point, @Param("id") long id);
 }
