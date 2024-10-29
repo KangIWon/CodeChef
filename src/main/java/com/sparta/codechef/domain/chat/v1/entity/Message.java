@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.chat.entity;
+package com.sparta.codechef.domain.chat.v1.entity;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
@@ -21,7 +21,7 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
-    private String message;
+    private String content;
 
     @Builder.Default
     private boolean isDeleted = false;

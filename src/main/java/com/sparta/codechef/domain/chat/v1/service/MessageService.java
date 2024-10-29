@@ -1,12 +1,12 @@
-package com.sparta.codechef.domain.chat.service;
+package com.sparta.codechef.domain.chat.v1.service;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
-import com.sparta.codechef.domain.chat.dto.response.MessageResponse;
-import com.sparta.codechef.domain.chat.entity.ChatRoom;
-import com.sparta.codechef.domain.chat.entity.Message;
-import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
-import com.sparta.codechef.domain.chat.repository.message.MessageRepository;
+import com.sparta.codechef.domain.chat.v1.dto.response.MessageResponse;
+import com.sparta.codechef.domain.chat.v1.entity.ChatRoom;
+import com.sparta.codechef.domain.chat.v1.entity.Message;
+import com.sparta.codechef.domain.chat.v1.repository.chat_room.ChatRoomRepository;
+import com.sparta.codechef.domain.chat.v1.repository.message.MessageRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class MessageService {
         );
 
         Message msg = Message.builder()
-                .message(message)
+                .content(message)
                 .chatRoom(chatRoom)
                 .user(user)
                 .build();
@@ -52,7 +52,7 @@ public class MessageService {
 
         return new MessageResponse(
                 savedMessage.getId(),
-                savedMessage.getMessage(),
+                savedMessage.getContent(),
                 user.getId(),
                 user.getEmail(),
                 savedMessage.getCreatedAt()
