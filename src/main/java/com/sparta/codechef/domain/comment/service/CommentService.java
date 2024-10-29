@@ -34,8 +34,6 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private final RedisTemplate<String, Object> redisTemplate;
-
     @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
         User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
