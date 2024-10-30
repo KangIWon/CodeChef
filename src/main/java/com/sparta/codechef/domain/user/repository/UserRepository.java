@@ -40,7 +40,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Modifying
     @Query("UPDATE User u SET u.point = 0")
     void resetUserPoint();
-  
+
+    @Modifying
     @Query("UPDATE User u SET u.point = u.point + :point WHERE u.id = :id")
     void updatePoints(@Param("point") int point, @Param("id") long id);
 }
