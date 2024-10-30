@@ -58,5 +58,5 @@ jobs:
             docker container stop my-app
             docker container prune -f
             docker image prune -a -f
-            docker pull ${{ secrets.DOCKER_USERNAME }}/my-app:latest
-            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app ${{ secrets.DOCKER_USERNAME }}/my-app:latest
+            docker pull "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
+            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
