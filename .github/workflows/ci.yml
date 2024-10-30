@@ -41,10 +41,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Build Docker image
-        run: docker build -t kangiwon/my-app:latest .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:latest .
 
       - name: Push the Docker image
-        run: docker push kangiwon/my-app:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest
 
       - name: ssh to ec2
         uses: appleboy/ssh-action@v1.1.0
@@ -58,5 +58,5 @@ jobs:
             docker container stop my-app
             docker container prune -f
             docker image prune -a -f
-            docker pull kangiwon/my-app:latest
-            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app kangiwon/my-app:latest
+            docker pull "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
+            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
