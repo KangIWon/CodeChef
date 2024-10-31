@@ -32,6 +32,6 @@ public class WSChatUser implements Serializable {
     public void updateRole(WSChatUserRole role) { this.role = role.name(); }
 
     public static WSChatUser fromAuthUser(AuthUser authUser) {
-        return new WSChatUser(authUser.getUserId(), authUser.getEmail(), null, WSChatUserRole.of(authUser.getRole()).name());
+        return new WSChatUser(authUser.getUserId(), authUser.getEmail(), null, WSChatUserRole.of(authUser.getUserRole()).name());
     }
 }

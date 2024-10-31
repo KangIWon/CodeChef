@@ -171,7 +171,7 @@ public class WSChatService {
 
     // 방장 권한 체크용
     public boolean hasAccess(AuthUser authUser) {
-        boolean isAdmin = authUser.getRole().equals(UserRole.ROLE_ADMIN);
+        boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
 
         if (!isAdmin) {
             boolean isHost = this.chatRepository.isHost(authUser.getUserId());

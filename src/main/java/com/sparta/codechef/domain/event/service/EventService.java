@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.event.service;
 
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
@@ -12,8 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -22,19 +21,20 @@ import java.util.concurrent.TimeUnit;
 public class EventService {
 
     private final UserRepository userRepository;
-
-    private final RedisTemplate<String, Object> redisTemplate;
-
     private final RedissonClient redissonClient;
 
-
     public Void eventStart(AuthUser authUser) {
-        Integer eventCoin = 100;
-        redissonClient.getBucket("event").set(eventCoin, 1L, TimeUnit.HOURS);
+        if (!authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
+            throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
+
+        RAtomicLong eventCounter = redissonClient.getAtomicLong("event");
+        eventCounter.set(100);
+        eventCounter.expire(1, TimeUnit.HOURS);
         return null;
     }
+
     @Transactional
-    public Void eventPoints(AuthUser authUser) {
+    public Void eventPoints2(AuthUser authUser) {
         // 업데이트를 위해 유저를 조회
         User user = userRepository.findById(authUser.getUserId()).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
@@ -62,6 +62,7 @@ public class EventService {
                     } else {
                         // 이벤트 종료 후, 남은 포인트가 없을 때
                         eventCounter.set(0); // 값이 음수로 내려가지 않도록 0으로 설정
+                        throw new ApiException(ErrorStatus.EVENT_END);
                     }
                     return null;
                 } finally {
@@ -83,7 +84,7 @@ public class EventService {
 
         // TTL 설정을 위해 RBucket 사용
         RBucket<Object> bucket = redissonClient.getBucket(redisKey);
-        bucket.expire(Duration.ofMinutes(10)); // 예: 10분 TTL 설정
+        bucket.expire(10, TimeUnit.MINUTES); // TTL을 10분으로 설정
         // 이벤트에서 받은 포인트 저장
         syncPointsToDatabase();
     }
@@ -103,5 +104,5 @@ public class EventService {
         }
 
     }
-
 }
+

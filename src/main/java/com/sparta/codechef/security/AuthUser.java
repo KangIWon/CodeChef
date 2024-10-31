@@ -14,15 +14,15 @@ public class AuthUser {
 
     private final Long userId;
     private final String email;
-    private final UserRole role;
+    private final UserRole userRole;
 
-    public AuthUser(Long userId, String email, UserRole role) {
+    public AuthUser(Long userId, String email, UserRole userRole) {
         this.userId = userId;
         this.email = email;
-        this.role = role;
+        this.userRole = userRole;
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority(userRole.name()));
     }
 }
