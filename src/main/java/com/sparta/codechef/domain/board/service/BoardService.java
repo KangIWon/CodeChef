@@ -22,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -247,6 +250,11 @@ public class BoardService {
     /**
      * 레디스 캐시어블을 사용할 때의 코드
      * */
+    @Retryable(
+            value = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 200)
+    )
     // 보드 조회수 증가 및 조회
     @Transactional
     public BoardDetailResponse getBoardDetails2(AuthUser authUser, Long boardId) {

@@ -45,8 +45,8 @@ public class Board extends Timestamped {
 
     private Long viewCount = 0L;
 
-//    @Version // 낙관적 락 적용을 위한 버전 필드
-//    private Long version;
+    @Version // 낙관적 락 적용을 위한 버전 필드
+    private Long version = 0L;
 
     public void setViewCount(Long viewCount) {
         this.viewCount = viewCount;
