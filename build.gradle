@@ -62,6 +62,9 @@ dependencies {
 
     implementation 'org.redisson:redisson-spring-boot-starter:3.16.3'
 
+    //elasticsearch
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
 }
 
 tasks.named('test') {
