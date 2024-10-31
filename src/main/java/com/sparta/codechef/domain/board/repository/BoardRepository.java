@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface BoardRepository extends JpaRepository<Board, Long>, BoardQueryDslRepository {
@@ -23,4 +24,7 @@ public interface BoardRepository extends JpaRepository<Board, Long>, BoardQueryD
 
     @Query("SELECT EXISTS(SELECT b FROM Board b WHERE b.id = :boardId AND b.user.id = :userId)")
     boolean existsByIdAndUserId(Long userId, Long boardId);
+
+    // 조회수를 기준으로 상위 3개의 보드를 내림차순으로 반환
+    List<Board> findTop3ByOrderByViewCountDesc();
 }
