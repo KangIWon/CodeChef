@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("@WSChatService.hasAccess(authentication.principal, #roomId)")
+@PreAuthorize("@WSChatService.hasAccess(authentication.principal)")
 public @interface AuthHost {
 }

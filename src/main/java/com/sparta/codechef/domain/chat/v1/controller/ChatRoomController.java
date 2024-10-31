@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.chat.v1.controller;
 import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.chat.v1.annotation.AuthHost;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomPasswordRequest;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
@@ -83,9 +84,10 @@ public class ChatRoomController {
     @PostMapping("/{chatRoomId}")
     public ApiResponse<Void> enterChatRoom(
             @AuthenticationPrincipal AuthUser authUser,
-            @PathVariable Long chatRoomId
+            @PathVariable Long chatRoomId,
+            @RequestBody ChatRoomPasswordRequest request
     ) {
-        this.chatRoomService.enterChatRoom(chatRoomId, authUser.getUserId());
+        this.chatRoomService.enterChatRoom(chatRoomId, authUser.getUserId(), request.getPassword());
 
         return ApiResponse.ok(
                 "채팅방에 입장하셨습니다.",

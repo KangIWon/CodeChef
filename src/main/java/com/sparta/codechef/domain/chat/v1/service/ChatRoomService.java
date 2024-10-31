@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 채팅방 생성
@@ -50,7 +52,7 @@ public class ChatRoomService {
         ChatRoom chatRoom = ChatRoom.builder()
                 .title(request.getTitle())
                 .maxParticipants(request.getMaxParticipants())
-                .password(request.getPassword())
+                .password(request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()))
                 .user(user)
                 .build();
 
@@ -87,7 +89,7 @@ public class ChatRoomService {
 
         chatRoom.updateRoomInfo(
                 request.getTitle(),
-                request.getPassword(),
+                request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()),
                 request.getMaxParticipants()
         );
 
@@ -103,7 +105,7 @@ public class ChatRoomService {
      * @param userId : 유저 id
      */
     @Transactional
-    public void enterChatRoom(Long chatRoomId, Long userId) {
+    public void enterChatRoom(Long chatRoomId, Long userId, String password) {
         User user = this.userRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
         );
@@ -115,6 +117,17 @@ public class ChatRoomService {
         ChatRoom chatRoom = this.chatRoomRepository.findExistChatRoomById(chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
+
+        if (chatRoom.getPassword() != null) {
+            boolean isSame = false;
+            if (password != null) {
+                isSame = passwordEncoder.matches(password, chatRoom.getPassword());
+            }
+
+            if (!isSame) {
+                throw new ApiException(ErrorStatus.ACCESS_DENIED_NOT_CORRECT_PASSWORD);
+            }
+        }
 
         int curParticipants = this.userRepository.countAllByChatRoom(chatRoomId);
 

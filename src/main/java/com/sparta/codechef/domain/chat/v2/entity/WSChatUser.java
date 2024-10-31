@@ -1,39 +1,37 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
-import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.security.AuthUser;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.redis.core.RedisHash;
 
 import java.io.Serializable;
 
 @Getter
-@Builder
-@RedisHash("ChatUser")
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@RedisHash("chatUser")
 public class WSChatUser implements Serializable {
 
     @Id
     private Long id;
     @NotNull
     private String email;
-    private Long chatRoomId;
-    @Builder.Default
-    private WSChatUserRole role = WSChatUserRole.ROLE_USER;
+    private Long roomId;
+    private String role;
 
-    public void updateChatRoom(Long chatRoomId) {
-        this.chatRoomId = chatRoomId;
+    public void updateChatRoom(Long roomId) {
+        this.roomId = roomId;
     }
 
-    public void updateRole(WSChatUserRole role) { this.role = role; }
+    public void updateRole(WSChatUserRole role) { this.role = role.name(); }
 
     public static WSChatUser fromAuthUser(AuthUser authUser) {
-        return WSChatUser.builder()
-                .id(authUser.getUserId())
-                .email(authUser.getEmail())
-                .role(WSChatUserRole.of((UserRole) authUser.getAuthorities().toArray()[0]))
-                .build();
+        return new WSChatUser(authUser.getUserId(), authUser.getEmail(), null, WSChatUserRole.of(authUser.getRole()).name());
     }
 }

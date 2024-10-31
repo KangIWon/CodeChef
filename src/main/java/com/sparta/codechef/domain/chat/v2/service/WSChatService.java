@@ -7,50 +7,62 @@ import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUserRole;
-import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
+import com.sparta.codechef.domain.chat.v2.repository.WSChatRepository;
 import com.sparta.codechef.domain.chat.v2.repository.WSChatRoomRepository;
+import com.sparta.codechef.domain.chat.v2.repository.WSChatUserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WSChatService {
-    private final WSChatRoomRepository WSChatRoomRepository;
-    private final com.sparta.codechef.domain.chat.v2.repository.WSChatUserRepository WSChatUserRepository;
+
+    private final WSChatRepository chatRepository;
+    private final WSChatRoomRepository chatRoomRepository;
+    private final WSChatUserRepository chatUserRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 채팅방 생성
-     * @param authUser : 인증 유저
+     * @param userId : 방장 ID
      * @param request : 채팅방 생성 정보 DTO(채팅방 이름, 비밀번호, 최대 정원)
      * @return
      */
-    public ChatRoomResponse createRoom(AuthUser authUser, ChatRoomCreateRequest request) {
-        WSChatUser chatUser = this.WSChatUserRepository.findById(authUser.getUserId()).orElseThrow(
+    public ChatRoomResponse createRoom(Long userId, ChatRoomCreateRequest request) {
+        WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
 
-        WSChatRoom chatRoom = WSChatRoom.builder()
-                .id(this.WSChatUserRepository.generateId("chatRoom"))
-                .title(request.getTitle())
-                .maxParticipants(request.getMaxParticipants())
-                .password(request.getPassword())
-                .hostId(authUser.getUserId())
-                .build();
+        if (chatUser.getRoomId() != null) {
+            throw new ApiException(ErrorStatus.ALREADY_IN_CHATROOM);
+        }
 
-        chatUser.updateChatRoom(chatRoom.getId());
+        WSChatRoom chatRoom = new WSChatRoom(
+                this.chatRepository.generateId("chatRoom"),
+                request.getTitle(),
+                request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()),
+                request.getMaxParticipants(),
+                0,
+                userId
+        );
+
+        Long roomId = chatRoom.getId();
         chatUser.updateRole(WSChatUserRole.ROLE_HOST);
-
-        this.WSChatRoomRepository.save(chatRoom);
-        this.WSChatUserRepository.save(chatUser);
-        this.WSChatUserRepository.saveChatRoom(chatRoom);
-
+        chatUser.updateChatRoom(roomId);
+        this.chatUserRepository.save(chatUser);
+        this.chatRoomRepository.save(chatRoom);
+        this.chatRepository.subscribeChatRoom(chatRoom.getId(), userId);
         return new ChatRoomResponse(chatRoom);
     }
 
@@ -61,7 +73,7 @@ public class WSChatService {
      * @return
      */
     public Page<ChatRoomGetResponse> getChatRooms(int page, int size) {
-        return this.WSChatUserRepository.getAllChatRooms(page, size);
+        return this.chatRepository.findAllChatRooms(page, size);
     }
 
 
@@ -72,119 +84,101 @@ public class WSChatService {
      * @return
      */
     public ChatRoomResponse updateChatRoom(Long chatRoomId, ChatRoomRequest request) {
-        WSChatRoom chatRoom = this.WSChatRoomRepository.findById(chatRoomId).orElseThrow(
+        WSChatRoom chatRoom = this.chatRoomRepository.findById(chatRoomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
         chatRoom.updateRoomInfo(
                 request.getTitle(),
-                request.getPassword(),
+                request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()),
                 request.getMaxParticipants()
         );
 
-        this.WSChatRoomRepository.save(chatRoom);
-
+        this.chatRoomRepository.save(chatRoom);
         return new ChatRoomResponse(chatRoom);
     }
 
 
     /**
-     * 채팅방 입장
-     * @param chatRoomId : 채팅방 id
+     * 채팅방 입장(구독)
+     * @param roomId : 채팅방 id
      * @param userId : 유저 id
      */
-    public void subscribeChatRoom(Long chatRoomId, Long userId) {
-        WSChatUser WSChatUser = this.WSChatUserRepository.findById(userId).orElseThrow(
+    public void subscribeChatRoom(Long roomId, Long userId, String password) {
+        log.info("입장");
+        WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
 
-        if (WSChatUser.getChatRoomId() != null) {
+        if (chatUser.getRoomId() != null) {
             throw new ApiException(ErrorStatus.ALREADY_IN_CHATROOM);
         }
-
-        WSChatRoom chatRoom = this.WSChatRoomRepository.findById(chatRoomId).orElseThrow(
+        log.info("채팅방 조회");
+        WSChatRoom chatRoom = this.chatRoomRepository.findById(roomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
-        Long curParticipants = this.WSChatUserRepository.countJoinedUser(chatRoomId);
+        String chatRoomPassword = chatRoom.getPassword();
 
-        if (chatRoom.getMaxParticipants() > curParticipants) {
-            WSChatUser.updateChatRoom(chatRoomId);
-            this.WSChatUserRepository.save(WSChatUser);
-            this.WSChatUserRepository.subscribeChatRoom(chatRoomId, userId);
+        log.info("비밀번호 체크");
+        if (chatRoomPassword != null) {
+            boolean isSame = false;
+            log.info("isSame: {}", isSame);
+            if (password != null) {
+                isSame = passwordEncoder.matches(password, chatRoomPassword);
+            }
+            log.info("isSame: {}", isSame);
+            if (!isSame) {
+                throw new ApiException(ErrorStatus.ACCESS_DENIED_NOT_CORRECT_PASSWORD);
+            }
+        }
+
+        if (chatRoom.getMaxParticipants() > chatRoom.getCurParticipants()) {
+            this.chatRepository.subscribeChatRoom(roomId, userId);
         } else {
             throw new ApiException(ErrorStatus.ROOM_CAPACITY_EXCEEDED);
         }
     }
 
     /**
-     * 채팅방 퇴장
-     * @param chatRoomId : 채팅방 id
+     * 채팅방 퇴장(구독 취소)
+     * @param roomId : 채팅방 id
      * @param userId : 유저 id
      */
-    public ChatRoomResponse unsubscribeChatRoom(Long chatRoomId, Long userId) {
-        ChatRoomResponse response = null;
-        WSChatUser chatUser = this.WSChatUserRepository.findById(userId).orElseThrow(
+    public void unsubscribeChatRoom(Long roomId, Long userId) {
+        WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
 
-        WSChatRoom chatRoom = this.WSChatRoomRepository.findById(chatRoomId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
-        );
-
-        boolean isHost = chatRoom.getHostId().equals(userId);
-
-        if (isHost) {
-            Optional<WSChatUser> optionalNewHost = this.WSChatUserRepository.findNextHost(chatRoomId, userId);
-
-            if (optionalNewHost.isPresent()) {
-                WSChatUser newHost = optionalNewHost.get();
-
-                chatRoom.updateHost(newHost.getId());
-                newHost.updateRole(WSChatUserRole.ROLE_HOST);
-
-                this.WSChatRoomRepository.save(chatRoom);
-                this.WSChatUserRepository.save(newHost);
-
-                response = new ChatRoomResponse(chatRoom);
-            } else {
-                this.WSChatRoomRepository.delete(chatRoom);
-                this.WSChatUserRepository.deleteFromChatRoomList(chatRoomId);
-
-                // 채팅 메세지 정리
-            }
+        if (chatUser.getRoomId() == null || !Objects.equals(chatUser.getRoomId(), roomId)) {
+            throw new ApiException(ErrorStatus.NOT_IN_CHATROOM);
         }
 
-        chatUser.updateChatRoom(null);
-        chatUser.updateRole(WSChatUserRole.ROLE_USER);
-        this.WSChatUserRepository.save(chatUser);
-
-        return response;
+        this.chatRepository.unsubscribeChatRoom(roomId, userId);
     }
 
-    // 웹 소켓 연결
+
+    // 웹 소켓 연결 후, 채팅 유저 저장
     public void connectChatUser(WSChatUser chatUser) {
-        this.WSChatUserRepository.save(chatUser);
+        this.chatUserRepository.save(chatUser);
     }
 
-    // 웹 소켓 연결 해제
-    public void disconnectChatUser(WSChatUser chatUser) {
-        this.WSChatUserRepository.delete(chatUser);
+    // 웹 소켓 연결 해제 후, 채팅 유저 삭제
+    public void disconnectChatUser(Long userId) {
+        this.chatUserRepository.deleteById(userId);
     }
 
 
     // 방장 권한 체크용
     public boolean hasAccess(AuthUser authUser) {
-        boolean isAdmin = authUser.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> auth.equals(UserRole.ROLE_ADMIN.name()));
+        boolean isAdmin = authUser.getRole().equals(UserRole.ROLE_ADMIN);
 
-        WSChatUser WSChatUser = this.WSChatUserRepository.findById(authUser.getUserId()).orElse(null);
-        boolean isHost = WSChatUser != null && WSChatUser.getRole().equals(WSChatUserRole.ROLE_HOST);
+        if (!isAdmin) {
+            boolean isHost = this.chatRepository.isHost(authUser.getUserId());
 
-
-        if (!isHost && !isAdmin) {
-            throw new ApiException(ErrorStatus.NOT_CHATROOM_HOST);
+            if (!isHost) {
+                throw new ApiException(ErrorStatus.NOT_CHATROOM_HOST);
+            }
         }
 
         return true;

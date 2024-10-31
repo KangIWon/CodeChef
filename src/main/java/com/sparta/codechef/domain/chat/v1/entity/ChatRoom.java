@@ -28,14 +28,14 @@ public class ChatRoom {
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // 방장
 
-    public void updateRoomInfo(String title, String password, Integer maxParticipants) {
+    public void updateRoomInfo(String title, String password, int maxParticipants) {
         if (title != null) {
             this.title = title;
         }
 
         this.password = password;
 
-        if (maxParticipants != null) {
+        if (maxParticipants != 0) {
             this.maxParticipants = maxParticipants;
         }
     }

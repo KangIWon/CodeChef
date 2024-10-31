@@ -34,7 +34,7 @@ public class MessageController {
     ) {
         return ApiResponse.ok(
                 "채팅글을 전송하였습니다.",
-                this.messageService.sendMessage(authUser.getUserId(), chatRoomId, request.getMessage())
+                this.messageService.sendMessage(authUser.getUserId(), chatRoomId, request.getContent())
         );
     }
 

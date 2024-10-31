@@ -1,13 +1,16 @@
 package com.sparta.codechef.domain.chat.v2.config;
 
+import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpAttributes;
+import org.springframework.messaging.simp.SimpAttributesContextHolder;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
@@ -19,11 +22,18 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 @RequiredArgsConstructor
 public class ChatEventListener {
 
+    private final WSChatService wsChatService;
+
     // 웹 소켓 연결 요청 처리
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
+
+        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
+        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
+
+        this.wsChatService.connectChatUser(chatUser);
 
         log.info("WebSocket connected, sessionId : {}", sessionId);
     }
@@ -52,6 +62,16 @@ public class ChatEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
+
+
+        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
+        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
+
+        if (chatUser == null) {
+            throw new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER);
+        }
+
+        this.wsChatService.disconnectChatUser(chatUser.getId());
 
         log.info("WebSocket disconnected, sessionId : {}", sessionId);
     }

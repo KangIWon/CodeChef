@@ -1,31 +1,178 @@
 package com.sparta.codechef.domain.chat.v2.repository;
 
+import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
-import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
-import org.springframework.data.domain.Page;
-import org.springframework.web.socket.WebSocketSession;
+import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
+import com.sparta.codechef.domain.chat.v2.entity.WSChatUserRole;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.*;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
-public interface WSChatRepository {
-    Long generateId(String key);
+@Slf4j
+@Repository
+@RequiredArgsConstructor
+public class WSChatRepository {
 
-    void saveChatRoom(WSChatRoom chatRoom);
 
-    Page<ChatRoomGetResponse> getAllChatRooms(int page, int size);
+    private final RedisTemplate<String, String> stringRedisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final WSChatRoomRepository chatRoomRepository;
+    private final WSChatUserRepository chatUserRepository;
 
-    void subscribeChatRoom(Long chatRoomId, Long userId);
+    private static final String SUBSCRIBE_CHAT_ROOM_KEY = "subChatRoom";
+    private static final String CHAT_ROOM_KEY = "chatRoom:";
+    private static final String CHAT_USER_KEY = "chatUser:";
 
-    Long countJoinedUser(Long chatRoomId);
 
-    Optional<WSChatUser> findNextHost(Long chatRoomId, Long userId);
 
-    void deleteFromChatRoomList(Long chatRoomId);
+    // 현재 등록된 마지막 ID
+    private Long getMaxId(String key) {
+        String maxId = (String) stringRedisTemplate.opsForValue().get("id:" + key);
+        if (maxId == null) {
+            throw new ApiException(ErrorStatus.NO_ID_OF_KEY);
+        }
+        return Long.parseLong(maxId);
+    }
 
-    boolean existsByIdAndUserId(Long chatRoomId, Long userId);
+    // ID 생성 메서드
+    public Long generateId(String key) {
+        return this.redisTemplate.opsForValue().increment("id:" + key);
+    }
 
-    void saveConnectedChatUser(WebSocketSession session, Long userId);
+    /**
+     * 채팅방 입장(구독)
+     *   - 유저 구독자 ZSet에 추가
+     *   - 채팅방 구독자수 +1
+     *   - 유저 구독 채팅방 ID 업데이트
+     * @param roomId : 채팅방 id
+     * @param userId : 채팅 유저 id
+     */
+    public void subscribeChatRoom(Long roomId, Long userId) {
+        this.redisTemplate.opsForZSet().add(SUBSCRIBE_CHAT_ROOM_KEY,  userId, roomId);
+        this.redisTemplate.opsForHash().put(CHAT_USER_KEY + userId, "roomId", roomId);
+        this.redisTemplate.opsForHash().increment(CHAT_ROOM_KEY + roomId, "curParticipants", 1);
+    }
 
-    void deleteDisconnectedUser(WebSocketSession session, Long userId);
+
+    /**
+     * 채팅방 퇴장(구독 해제)
+     *   - 유저 구독자 ZSet에서 제거
+     *   - 채팅방 현재 구독자 수 -1
+     *   - 유저의 구독 채팅방 id 삭제
+     *   - 구독자가 없으면 채팅방 삭제
+     *   - 퇴장한 유저가 방장일 때, 승계할 유저 ID 반환
+     *
+     * @param roomId : 채팅방 ID
+     * @param userId : 유저 ID
+     */
+    public void unsubscribeChatRoom(Long roomId, Long userId) {
+        this.redisTemplate.opsForZSet().remove(SUBSCRIBE_CHAT_ROOM_KEY, userId);
+        this.redisTemplate.opsForHash().delete(CHAT_USER_KEY + userId, "roomId");
+        Long total = this.redisTemplate.opsForHash().increment(CHAT_ROOM_KEY + roomId, "curParticipants",-1);
+
+        if (total == 0) {
+            this.redisTemplate.delete(CHAT_ROOM_KEY + roomId);
+        }
+
+        if (this.isHost(userId)) {
+            this.successChatRoomHost(roomId, userId);
+        }
+    }
+
+    /**
+     * 채팅방 방장 승계할 유저 ID getter
+     * @param roomId : 채팅방 ID
+     */
+    public void successChatRoomHost(Long roomId, Long userId) {
+        Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().range(SUBSCRIBE_CHAT_ROOM_KEY, roomId - 1, roomId);
+
+        if (userIdSet == null || userIdSet.isEmpty()) {
+            return;
+        }
+
+        Long nextHostId = Long.parseLong(userIdSet.stream().toList().get(0));
+
+        WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
+        );
+
+        chatUser.updateRole(WSChatUserRole.ROLE_USER);
+        this.chatUserRepository.save(chatUser);
+
+        WSChatUser nextHost = this.chatUserRepository.findById(nextHostId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
+        );
+
+        nextHost.updateRole(WSChatUserRole.ROLE_HOST);
+        this.chatUserRepository.save(nextHost);
+
+        this.redisTemplate.opsForHash().put(CHAT_ROOM_KEY + roomId, "hostId", nextHostId);
+    }
+
+
+    // 현재 채팅 접속 중인 유저인지 확인
+    public boolean isConnected(Long userId) {
+        return this.redisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "id") != null;
+    }
+
+    // 현재 채팅방에 접속해 있는 유저인지 확인
+    public boolean isInChatRoom(Long userId) {
+        Long roomId = (Long) this.redisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "chatRoomId");
+        return roomId != null;
+    }
+
+
+    // 채팅방 방장 여부 조회
+    public boolean isHost(Long userId) {
+        String role = (String) this.stringRedisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "role");
+
+        return Objects.equals(role, "ROLE_HOST");
+    }
+
+
+    // 전체 채팅방 조회
+    public Page<ChatRoomGetResponse> findAllChatRooms(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("id"));
+
+        int start = (page - 1) * size;
+        int end = start + size;
+
+        List<WSChatRoom> chatRoomList = StreamSupport.stream(this.chatRoomRepository.findAll().spliterator(), false)
+                .sorted(Comparator.comparing(WSChatRoom::getId))
+                .toList();
+
+        long totalChatRoom = chatRoomList.size();
+
+        if (totalChatRoom < start || totalChatRoom == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        List<ChatRoomGetResponse> responseList = IntStream.range(start, (int) Math.min(end, start + totalChatRoom))
+                .mapToObj(chatRoomList::get)
+                .map(chatRoom -> new ChatRoomGetResponse(
+                        chatRoom.getId(),
+                        chatRoom.getTitle(),
+                        chatRoom.getPassword(),
+                        chatRoom.getCurParticipants(),
+                        chatRoom.getMaxParticipants()
+                ))
+                .toList();
+
+        return new PageImpl<>(responseList, pageable, totalChatRoom);
+    }
+
+    public void checkPassword(Long roomId, String password) {
+    }
 }
+

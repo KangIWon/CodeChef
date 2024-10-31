@@ -8,13 +8,13 @@ public class ChatRoomGetResponse {
     private final Long id;
     private final String title;
     private final boolean isSecret;
-    private final long curParticipants;
+    private final int curParticipants;
     private final int maxParticipants;
 
-    public ChatRoomGetResponse(Long id, String title, boolean isSecret, long curParticipants, int maxParticipants) {
+    public ChatRoomGetResponse(Long id, String title, String password, int curParticipants, int maxParticipants) {
         this.id = id;
         this.title = title;
-        this.isSecret = isSecret;
+        this.isSecret = password != null;
         this.curParticipants = curParticipants;
         this.maxParticipants = maxParticipants;
     }

@@ -1,7 +1,8 @@
 package com.sparta.codechef.domain.chat.v2.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.chat.v1.annotation.AuthHost;
+import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomPasswordRequest;
+import com.sparta.codechef.domain.chat.v2.annotation.AuthHost;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
@@ -9,6 +10,7 @@ import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
 import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 import com.sparta.codechef.security.AuthUser;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v2/chats/rooms")
 public class ChatController {
 
-    private final WSChatService WSChatService;
+    private final WSChatService wsChatService;
 
     /**
      * 채팅방 생성
@@ -33,7 +35,7 @@ public class ChatController {
     ) {
         return ApiResponse.ok(
                 "채팅방이 생성되었습니다.",
-                this.WSChatService.createRoom(authUser, request)
+                this.wsChatService.createRoom(authUser.getUserId(), request)
         );
     }
 
@@ -45,12 +47,15 @@ public class ChatController {
      */
     @GetMapping
     public ApiResponse<Page<ChatRoomGetResponse>> getChatRooms(
-            @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "10") int size
+            @RequestParam(defaultValue = "1")
+            @Min(value = 1, message = "페이지 번호는 최소 1입니다.")
+            int page,
+            @RequestParam(defaultValue = "10")
+            int size
     ) {
         return ApiResponse.ok(
                 "채팅방 전체 목록을 조회하였습니다.",
-                this.WSChatService.getChatRooms(page, size)
+                this.wsChatService.getChatRooms(page, size)
         );
     }
 
@@ -65,10 +70,10 @@ public class ChatController {
     @PutMapping("/{roomId}")
     public ApiResponse<ChatRoomResponse> updateChatRoom(
             @PathVariable Long roomId,
-            @Valid @RequestBody ChatRoomRequest request) {
+            @RequestBody ChatRoomRequest request) {
         return ApiResponse.ok(
                 "채팅방이 수정되었습니다.",
-                this.WSChatService.updateChatRoom(roomId, request)
+                this.wsChatService.updateChatRoom(roomId, request)
         );
     }
 
@@ -81,9 +86,10 @@ public class ChatController {
     @PostMapping("/{roomId}")
     public ApiResponse<Void> enterChatRoom(
             @AuthenticationPrincipal AuthUser authUser,
-            @PathVariable Long roomId
+            @PathVariable Long roomId,
+            @RequestBody(required = false) ChatRoomPasswordRequest request
     ) {
-        this.WSChatService.subscribeChatRoom(roomId, authUser.getUserId());
+        this.wsChatService.subscribeChatRoom(roomId, authUser.getUserId(), request.getPassword());
 
         return ApiResponse.ok(
                 "채팅방에 입장하셨습니다.",
@@ -99,13 +105,16 @@ public class ChatController {
      * @param roomId : 채팅방 ID
      */
     @DeleteMapping("/{roomId}")
-    public ApiResponse<ChatRoomResponse> exitChatRoom(
+    public ApiResponse<Void> exitChatRoom(
             @AuthenticationPrincipal AuthUser authUser,
             @PathVariable Long roomId
     ) {
+
+        this.wsChatService.unsubscribeChatRoom(roomId, authUser.getUserId());
+
         return ApiResponse.ok(
                 "채팅방에서 퇴장하셨습니다.",
-                this.WSChatService.unsubscribeChatRoom(roomId, authUser.getUserId())
+                null
         );
     }
 }

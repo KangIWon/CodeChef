@@ -1,5 +1,7 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.sparta.codechef.common.enums.UserRole;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,7 @@ import java.util.Arrays;
 
 @Getter
 @RequiredArgsConstructor
+@JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum WSChatUserRole {
     ROLE_ADMIN(Authority.ADMIN),
     ROLE_HOST(Authority.HOST),
@@ -29,7 +32,6 @@ public enum WSChatUserRole {
                 .findFirst()
                 .orElseThrow(() -> new InvalidRequestException("유효하지 않은 권한입니다."));
     }
-
 
     public static class Authority {
         public static final String ADMIN = "ROLE_ADMIN";

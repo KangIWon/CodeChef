@@ -1,19 +1,21 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
-import com.sparta.codechef.common.ErrorStatus;
-import com.sparta.codechef.common.exception.ApiException;
-import jakarta.persistence.*;
+import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.redis.core.RedisHash;
 
 import java.io.Serializable;
 
 
 @Getter
-@Builder
-@RedisHash("ChatRoom")
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@RedisHash("chatRoom")
 public class WSChatRoom implements Serializable {
 
     @Id
@@ -22,18 +24,18 @@ public class WSChatRoom implements Serializable {
     private String title;
     private String password;
     private int maxParticipants;
+    private int curParticipants;
     @NotNull
     private Long hostId;  // 방장
 
-
-    public void updateRoomInfo(String title, String password, Integer maxParticipants) {
+    public void updateRoomInfo(String title, String password, int maxParticipants) {
         if (title != null) {
             this.title = title;
         }
 
         this.password = password;
 
-        if (maxParticipants != null) {
+        if (maxParticipants != 0) {
             this.maxParticipants = maxParticipants;
         }
     }
@@ -41,4 +43,6 @@ public class WSChatRoom implements Serializable {
     public void updateHost(Long hostId) {
         this.hostId = hostId;
     }
+    public void subscribeChatRoom() { this.curParticipants++; }
+    public void unsubscribeChatRoom() { this.curParticipants--; }
 }

@@ -40,6 +40,10 @@ jwt:
   secret:
     key: ${JWT_SECRET_KEY}
 
+web-socket:
+  secret:
+    key: ${WEB_SOCKET_SECRET_KEY}
+
 s3:
   credentials:
     access-key: ${S3_CREDENTIALS_ACCESS_KEY}

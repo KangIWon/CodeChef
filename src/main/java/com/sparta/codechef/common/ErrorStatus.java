@@ -23,6 +23,7 @@ public enum ErrorStatus implements BaseCode {
     NOT_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, 400, "리프레쉬 토큰이 아닙니다."),
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED,401,"만료된 리프레쉬 토큰입니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, 400, "잘못된 리프레쉬 토큰입니다"),
+    FAILED_TO_AUTHORIZE_USER(HttpStatus.INTERNAL_SERVER_ERROR, 500,"JWT 토큰 검증 중 오류가 발생했습니다."),
 
     // 유저 관련 예외
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, 401, "인증되지 않은 유저입니다."),
@@ -71,17 +72,25 @@ public enum ErrorStatus implements BaseCode {
     // 채팅방 관련 예외
     NOT_FOUND_CHATROOM(HttpStatus.NOT_FOUND, 404, "채팅방을 찾을 수 없습니다."),
     ALREADY_IN_CHATROOM(HttpStatus.CONFLICT, 409, "이미 채팅방에 접속해 있습니다."),
+    ACCESS_DENIED_NOT_CORRECT_PASSWORD(HttpStatus.FORBIDDEN, 403, "잘못된 채팅방 비밀번호입니다."),
     ROOM_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, 409, "채팅방 정원이 초과되었습니다."),
     NOT_IN_CHATROOM(HttpStatus.CONFLICT, 409, "현재 채팅방에 접속해 있지 않습니다."),
     NOT_CHATROOM_HOST(HttpStatus.UNAUTHORIZED, 401, "채팅방 방장이 아닙니다."),
-    FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),
     NOT_FOUND_CHAT_USER(HttpStatus.NOT_FOUND, 404, "채팅에 접속되어 있지 않습니다."),
+    NO_USER_IN_CHATROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방에 유저가 없습니다."),
+    UNAUTHORIZED_CHAT_USER(HttpStatus.UNAUTHORIZED, 401, "채팅방 접속 인증 유저 정보를 찾을 수 없습니다."),
+
+    // 메세지 관련 예외
+    FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),
 
     // DB 관련 예외
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),
 
     // Validation 예외
-    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다.");
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
+
+    JSON_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 500, "JSON 타입으로 데이터 변환 중 예외가 발생하였습니다."),
+    NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;
