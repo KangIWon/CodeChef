@@ -3,9 +3,7 @@ package com.sparta.codechef.domain.user.controller;
 
 import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.language.dto.LanguageRequest;
-import com.sparta.codechef.domain.user.entity.UserLanguage;
-import com.sparta.codechef.domain.user.repository.UserLanguageRepository;
-import com.sparta.codechef.domain.user.service.UserLanguageService;
+import com.sparta.codechef.domain.user.repository.service.UserLanguageService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
