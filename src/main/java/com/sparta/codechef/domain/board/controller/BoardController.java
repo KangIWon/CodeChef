@@ -47,15 +47,6 @@ public class BoardController {
         return ApiResponse.ok("게시물 전체 조회 성공", boardService.findAllBoard(page, size));
     }
 
-//    /**
-//     * 게시물 단건 조회
-//     * @param boardId : 보려고 하는 게시물 번호
-//     * */
-//    @GetMapping("/{boardId}") // 게시판 단건 조회
-//    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId) {
-//        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId));
-//    }
-
     /**
      * 자기가 쓴 게시물 보기
      * @param authUser : 로그인 유저 정보
@@ -95,7 +86,6 @@ public class BoardController {
         return ApiResponse.ok(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser));
     }
 
-
     /**
      * 게시물 검색
      * @param  title : 제목으로 검색
@@ -111,32 +101,22 @@ public class BoardController {
                                                         @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok("검색 기록", boardService.boardSearch(title,content,page,size));
     }
+
+    /**
+     * 게시물 단건 조회
+     * @param boardId : 보려고 하는 게시물 번호
+     * */
     // 보드 조회 (조회수 카운팅 포함)
-//    @GetMapping("/{boardId}/abc")
-//    public ApiResponse<BoardDetailResponse> getBoardDetails(@AuthenticationPrincipal AuthUser authUser,
-//                                                                   @PathVariable Long boardId) {
-//        // 사용자 ID를 활용해 어뷰징 방지를 위한 조회수 카운팅
-//        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoardDetails(authUser, boardId));
-//    }
-//
+    @GetMapping("/{boardId}")
+    public ApiResponse<BoardDetailResponse> getBoardDetails(@AuthenticationPrincipal AuthUser authUser,
+                                                            @PathVariable Long boardId) {
+        // 사용자 ID를 활용해 어뷰징 방지를 위한 조회수 카운팅
+        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoardDetails(authUser, boardId));
+    }
 
     // 실시간 인기 보드 랭킹 조회
     @GetMapping("/top")
     public ApiResponse<List<BoardResponse>> getTopBoards() {
         return ApiResponse.ok( "실시간으로 가장 인기 있는 보드를 조회했습니다.", boardService.getTopBoards());
-    }
-
-    // redis 보드 조회 (조회수 카운팅 포함)
-    @GetMapping("/{boardId}/test")
-    public ApiResponse<BoardDetailResponse> getBoardDetails2(@AuthenticationPrincipal AuthUser authUser,
-                                                            @PathVariable Long boardId) {
-        // 사용자 ID를 활용해 어뷰징 방지를 위한 조회수 카운팅
-        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoardDetails2(authUser, boardId));
-    }
-
-    // redis 실시간 인기 보드 랭킹 조회
-    @GetMapping("/top/test")
-    public ApiResponse<List<BoardResponse>> getTopBoards2() {
-        return ApiResponse.ok( "실시간으로 가장 인기 있는 보드를 조회했습니다.", boardService.getTopBoards2());
     }
 }

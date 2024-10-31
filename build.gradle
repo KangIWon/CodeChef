@@ -60,6 +60,12 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.524'
 
+    implementation 'org.redisson:redisson-spring-boot-starter:3.16.3'
+
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects' // @EnableRetry 사용 시 필요
+
+    implementation 'org.redisson:redisson-spring-boot-starter:3.16.3'
 
 }
 

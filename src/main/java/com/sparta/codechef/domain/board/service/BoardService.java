@@ -198,81 +198,35 @@ public class BoardService {
                 board.getFramework()));
     }
 
-//    // 보드 조회 (조회수 카운팅 포함)
-//    @Transactional
-//    public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-//        Board board = boardRepository.findById(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-//        );
-//        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
-//        );
-//        // 조회수 증가
-//        board.setViewCount(board.getViewCount() + 1);
-//        boardRepository.save(board); // DB에 즉시 반영
-//        // 랭킹 업데이트
-//        updateRanking(board);
-//        return new BoardDetailResponse(board.getId(),
-//                board.getUser().getId(),
-//                board.getTitle(),
-//                board.getContents(),
-//                board.getLanguage().name(),
-//                board.getFramework(),
-//                commentList.stream().map(comment -> new CommentResponse(
-//                        comment.getId(),
-//                        comment.getContent(),
-//                        comment.getUser().getId(),
-//                        comment.getBoard().getId(),
-//                        comment.getIsAdopted())).toList());
-//    }
-//    // 랭킹 업데이트
-//    private void updateRanking(Board board) {
-//        board.setViewCount(board.getViewCount()); // 최신 조회수 기준 랭킹 점수 업데이트
-//        boardRepository.save(board); // DB에 저장
-//    }
-    // 인기 보드 랭킹 조회
-    @Transactional(readOnly = true)
-    public List<BoardResponse> getTopBoards() {
-        List<Board> topBoards = boardRepository.findTop3ByOrderByViewCountDesc();
-        return topBoards.stream()
-                .map(board -> new BoardResponse(board.getId(), board.getUser().getId(), board.getTitle(),
-                        board.getContents(), board.getLanguage().name(), board.getFramework()))
-                .collect(Collectors.toList());
-    }
-    // 매 시간마다 조회수 초기화 (매 시간마다 실행)
-    @Scheduled(cron = "0 0 * * * *")
-    @Transactional
-    public void resetDailyViewCount() {
-        List<Board> boards = boardRepository.findAll();
-        boards.forEach(board -> board.setViewCount(0L));
-        boardRepository.saveAll(boards);
-    }
     /**
-     * 레디스 캐시어블을 사용할 때의 코드
+     * 보드 조회수 증가 및 조회
+     * @param authUser : 로그인 유저 정보
+     * @param boardId : 조회 하려는 게시물 번호
      * */
-    @Retryable(
-            value = ObjectOptimisticLockingFailureException.class,
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 200)
-    )
     // 보드 조회수 증가 및 조회
     @Transactional
-    public BoardDetailResponse getBoardDetails2(AuthUser authUser, Long boardId) {
+    public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
         String redisViewKey = "board:viewcount:" + boardId;
 //      아래 코드 어뷰징 확인하는 코드임
 //        incrementViewCount(redisViewKey, authUser.getUserId().toString());
 
         // Redis에서 보드 조회수 가져오기 (증가)
         Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
-        // DB에서 보드와 댓글 정보 조회
-        Board board = boardRepository.findById(boardId).orElseThrow(
+
+        // 비관적 락으로 보드 조회
+        Board board = boardRepository.findByIdWithPessimisticLock(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
+
         List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
         );
-        // 엔티티의 조회수를 Redis 조회수로 업데이트
-        board.setViewCount(viewCount); // 엔티티의 조회수 업데이트
+
+        // 엔티티에는 전체 조회수를 저장해주기 위해 레디스 값(실시간 조회수 값)을 저장하는 것이 아니라 그냥 계속 조회수를 증가하는 방식으로 업데이트
+        // 엔티티의 조회수 업데이트
+        board.setViewCount();  // 조회수 증가
+        boardRepository.save(board);  // 업데이트 반영
+
         // 랭킹 업데이트 (Sorted Set에 추가)
         updateRanking(boardId, viewCount);
         // 응답 데이터 생성
@@ -292,6 +246,7 @@ public class BoardService {
                         comment.getIsAdopted())).toList()
         );
     }
+
     // 랭킹 업데이트
     private void updateRanking(Long boardId, Long viewCount) {
         String rankingKey = "board:ranking";
@@ -311,7 +266,7 @@ public class BoardService {
 
     // 인기 보드 랭킹 관리
     @Cacheable(value = "topBoardsCache", key = "'topBoards'")
-    public List<BoardResponse> getTopBoards2() {
+    public List<BoardResponse> getTopBoards() {
         String rankingKey = "board:ranking";
         // Redis에서 인기 보드 ID 리스트 가져오기 (조회수 기준 내림차순)
         Set<ZSetOperations.TypedTuple<Object>> topBoardIdsWithScores = redisTemplate.opsForZSet()
