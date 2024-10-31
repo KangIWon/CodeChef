@@ -47,14 +47,14 @@ public class BoardController {
         return ApiResponse.ok("게시물 전체 조회 성공", boardService.findAllBoard(page, size));
     }
 
-    /**
-     * 게시물 단건 조회
-     * @param boardId : 보려고 하는 게시물 번호
-     * */
-    @GetMapping("/{boardId}") // 게시판 단건 조회
-    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId) {
-        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId));
-    }
+//    /**
+//     * 게시물 단건 조회
+//     * @param boardId : 보려고 하는 게시물 번호
+//     * */
+//    @GetMapping("/{boardId}") // 게시판 단건 조회
+//    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId) {
+//        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId));
+//    }
 
     /**
      * 자기가 쓴 게시물 보기
