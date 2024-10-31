@@ -15,6 +15,7 @@ public class BoardDetailResponse {
     private  String content;
     private String language;
     private Framework framework;
+    private Long viewCount;
 
     private List<CommentResponse> commentResponseDtoList;
 
@@ -24,13 +25,14 @@ public class BoardDetailResponse {
                          String content,
                          String language,
                          Framework framework,
-                         List<CommentResponse> commentResponseDtoList) {
+                         Long viewCount, List<CommentResponse> commentResponseDtoList) {
         this.id = id;
         this.userId = userId;
         this.title = title;
         this.content = content;
         this.language = language;
         this.framework = framework;
+        this.viewCount = viewCount;
         this.commentResponseDtoList = commentResponseDtoList;
     }
 }

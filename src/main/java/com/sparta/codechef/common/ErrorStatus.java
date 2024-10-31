@@ -81,9 +81,7 @@ public enum ErrorStatus implements BaseCode {
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),
 
     // Validation 예외
-    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
-
-    EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다.");
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;
