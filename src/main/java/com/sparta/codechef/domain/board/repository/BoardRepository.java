@@ -15,15 +15,11 @@ public interface BoardRepository extends JpaRepository<Board, Long>, BoardQueryD
     Optional<Page<Board>> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("SELECT c FROM Board c " +
-            "WHERE (:title IS NULL OR c.title LIKE %:title%) " +
-            "AND (:content IS NULL OR c.contents LIKE %:content%)")
+            "WHERE (:title IS NULL OR c.title LIKE CONCAT(:title, '%')) " +
+            "AND (:content IS NULL OR c.contents LIKE CONCAT(:content, '%'))")
     Page<Board> boardSearch(@Param("title") String title,
                             @Param("content") String content,
                             Pageable pageable);
-//    @Query("SELECT c FROM Board c " +
-//            "WHERE (:title IS NULL AND :content IS NULL) OR " +
-//            "(MATCH(c.title, c.contents) AGAINST(:keyword IN BOOLEAN MODE))")
-//    Page<Board> boardSearch(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT EXISTS(SELECT b FROM Board b WHERE b.id = :boardId AND b.user.id = :userId)")
     boolean existsByIdAndUserId(Long userId, Long boardId);
