@@ -4,7 +4,7 @@ import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.user.dto.response.UserPoint;
 import com.sparta.codechef.domain.user.dto.response.UserRankingTop3;
 import com.sparta.codechef.domain.user.service.RankingService;
-import com.sparta.codechef.domain.user.repository.service.UserService;
+import com.sparta.codechef.domain.user.service.UserService;
 import com.sparta.codechef.security.AuthUser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

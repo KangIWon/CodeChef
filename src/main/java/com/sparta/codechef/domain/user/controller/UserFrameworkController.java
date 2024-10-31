@@ -3,7 +3,7 @@ package com.sparta.codechef.domain.user.controller;
 
 import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.framework.dto.FrameworkRequest;
-import com.sparta.codechef.domain.user.repository.service.UserFrameworkService;
+import com.sparta.codechef.domain.user.service.UserFrameworkService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
