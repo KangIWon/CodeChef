@@ -83,7 +83,10 @@ public enum ErrorStatus implements BaseCode {
     // Validation 예외
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
 
-    EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다.");
+    EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
+
+    // 낙관적 락 예외 처리
+    OPTIMISTIC_LOCK_FAILED(HttpStatus.NO_CONTENT, 204, "다시 시도해 주세요.");
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;

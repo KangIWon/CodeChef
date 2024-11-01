@@ -26,6 +26,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,7 @@ public class BoardService {
                 .contents(request.getContents())
                 .language(request.getLanguage())
                 .framework(request.getFramework())
+                .viewCount(0L)
                 .build();
 
         boardRepository.save(board);
@@ -179,12 +181,20 @@ public class BoardService {
      * @param boardId : 조회 하려는 게시물 번호
      * */
     // 보드 조회수 증가 및 조회
-    // Board 조회 및 데이터 반환
     // Board 조회 및 조회수 증가
-// Board 조회 및 조회수 증가
+    @Retryable(
+            value = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000)
+    )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+
+        // 비관적 락
+//        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+//                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
         List<Comment> commentList = commentRepository.findByBoardId(boardId)
@@ -212,6 +222,12 @@ public class BoardService {
                         comment.getBoard().getId(),
                         comment.getIsAdopted())).toList()
         );
+    }
+
+    // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
+    @Recover
+    public BoardDetailResponse handleOptimisticLockFailure(ObjectOptimisticLockingFailureException e, AuthUser authUser, Long boardId) {
+        throw new ApiException(ErrorStatus.OPTIMISTIC_LOCK_FAILED);
     }
 
     // 데이터베이스의 조회수 증가
@@ -297,6 +313,8 @@ public class BoardService {
                 .collect(Collectors.toList());
         return topBoards;
     }
+
+    // 스케줄러 aop 만들어서 하는 법을 써도 된다.
     // 매 시간마다 캐시 리셋
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
