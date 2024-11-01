@@ -16,6 +16,7 @@ import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -180,8 +182,6 @@ public class BoardService {
      * @param authUser : 로그인 유저 정보
      * @param boardId : 조회 하려는 게시물 번호
      * */
-    // 보드 조회수 증가 및 조회
-    // Board 조회 및 조회수 증가
     @Retryable(
             value = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 3,
@@ -189,44 +189,58 @@ public class BoardService {
     )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
+        int retryCount = 0;
 
-        // 비관적 락
-//        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
-//                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+        log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+        while (true) {
+            try {
+                Board board = boardRepository.findById(boardId)
+                        .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-        List<Comment> commentList = commentRepository.findByBoardId(boardId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
+                List<Comment> commentList = commentRepository.findByBoardId(boardId)
+                        .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
-        // 데이터베이스에서 조회수 증가 처리
-        incrementDatabaseViewCount(board);
+                // 데이터베이스에서 조회수 증가 처리
+                incrementDatabaseViewCount(board);
 
-        // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
-        publishViewCountEvent(authUser, boardId);
+                // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
+                publishViewCountEvent(authUser, boardId);
 
-        // 조회수 증가가 반영된 보드 정보를 반환
-        return new BoardDetailResponse(
-                board.getId(),
-                board.getUser().getId(),
-                board.getTitle(),
-                board.getContents(),
-                board.getLanguage().name(),
-                board.getFramework(),
-                board.getViewCount(),
-                commentList.stream().map(comment -> new CommentResponse(
-                        comment.getId(),
-                        comment.getContent(),
-                        comment.getUser().getId(),
-                        comment.getBoard().getId(),
-                        comment.getIsAdopted())).toList()
-        );
+                log.info("성공임");
+                log.info("Successfully retrieved board details for boardId: {}", boardId);
+                // 조회수 증가가 반영된 보드 정보를 반환
+                return new BoardDetailResponse(
+                        board.getId(),
+                        board.getUser().getId(),
+                        board.getTitle(),
+                        board.getContents(),
+                        board.getLanguage().name(),
+                        board.getFramework(),
+                        board.getViewCount(),
+                        commentList.stream().map(comment -> new CommentResponse(
+                                comment.getId(),
+                                comment.getContent(),
+                                comment.getUser().getId(),
+                                comment.getBoard().getId(),
+                                comment.getIsAdopted())).toList()
+                );
+            } catch (ObjectOptimisticLockingFailureException e) {
+                retryCount++;
+                log.warn("Optimistic locking failed. Retry attempt: {}", retryCount);
+                log.info("실패함");
+                // 재시도가 모두 실패한 경우 처리
+                if (retryCount >= 3) {
+                    return handleOptimisticLockFailure(e, authUser, boardId);
+                }
+            }
+        }
     }
 
     // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
     @Recover
     public BoardDetailResponse handleOptimisticLockFailure(ObjectOptimisticLockingFailureException e, AuthUser authUser, Long boardId) {
+        log.error("Optimistic locking failed for boardId: {} after maximum retries", boardId);
         throw new ApiException(ErrorStatus.OPTIMISTIC_LOCK_FAILED);
     }
 
@@ -245,18 +259,9 @@ public class BoardService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleViewCountIncrement(BoardDetailEvent event) {
         String redisViewKey = "board:viewcount:" + event.getBoardId();
-//        // 아래 코드 어뷰징 확인하는 코드임
-//        incrementViewCount(redisViewKey, event.getAuthUser().getUserId().toString());
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
+        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);
         updateRanking(event.getBoardId(), viewCount);
     }
-
-
-
-//    Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
-//
-//    // 아래 코드 어뷰징 확인하는 코드임
-//    // incrementViewCount(redisViewKey, authUser.getUserId().toString());
 
     // 랭킹 업데이트
     private void updateRanking(Long boardId, Long viewCount) {
@@ -264,6 +269,7 @@ public class BoardService {
         redisTemplate.opsForZSet().add(rankingKey, boardId, viewCount);
     }
 
+    // 어뷰징 방지를 위한 조회수 증가
     private void incrementViewCount(String redisKey, String userId) {
         String userKey = redisKey + ":user:" + userId;
 
