@@ -4,14 +4,9 @@ import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Language;
 import com.sparta.codechef.common.enums.LanguageConverter;
-import com.sparta.codechef.domain.comment.entity.Comment;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
-
 import lombok.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Entity

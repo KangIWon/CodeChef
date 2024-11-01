@@ -10,7 +10,6 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
-import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
@@ -20,14 +19,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class AttachmentService {
 
-    private final AmazonS3 amazonS3;
     private final BoardRepository boardRepository;
-    private final AmazonS3Client amazonS3Client;
+    private final AmazonS3 amazonS3;
 
     @Value("${s3.bucket}")
     private String bucketName;
@@ -39,6 +38,12 @@ public class AttachmentService {
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
     public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
+        fileList = fileList.stream().filter(Objects::nonNull).filter(file -> !file.getOriginalFilename().isBlank()).toList();
+
+        if (fileList.isEmpty()) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
 
         return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
@@ -58,7 +63,7 @@ public class AttachmentService {
         };
 
         return this.getKeyListFromS3(boardId).stream().map(key -> {
-            String s3Url = amazonS3Client.getUrl(bucketName, key).toString();
+            String s3Url = amazonS3.getUrl(bucketName, key).toString();
 
             return new AttachmentResponse(
                     this.getOriginalFileName(boardId, key),
@@ -88,7 +93,7 @@ public class AttachmentService {
                 .withBucketName(bucketName)
                 .withPrefix(this.getPath(boardId));
 
-        ListObjectsV2Result result = amazonS3Client.listObjectsV2(request);
+        ListObjectsV2Result result = amazonS3.listObjectsV2(request);
 
         return result.getObjectSummaries().stream()
                 .map(S3ObjectSummary::getKey)
@@ -109,15 +114,15 @@ public class AttachmentService {
         metadata.setContentType(file.getContentType());
 
         try {
-            amazonS3Client.putObject(bucketName, s3Key, file.getInputStream(), metadata);
+            amazonS3.putObject(bucketName, s3Key, file.getInputStream(), metadata);
 
         } catch (IOException e) {
-            throw new ApiException(ErrorStatus.S3_UPLOAD_FILE_FAILED);
+            throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
         }
 
         return new AttachmentResponse(
                 file.getOriginalFilename(),
-                amazonS3Client.getUrl(bucketName, s3Key).toString()
+                amazonS3.getUrl(bucketName, s3Key).toString()
         );
     }
 
@@ -127,9 +132,9 @@ public class AttachmentService {
      */
     public void deleteFile(String key) {
         try {
-            amazonS3Client.deleteObject(bucketName, key);
+            amazonS3.deleteObject(bucketName, key);
         } catch (Exception e) {
-            throw new ApiException(ErrorStatus.DELETE_FILE_FAILED);
+            throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
         }
     }
 
@@ -157,9 +162,9 @@ public class AttachmentService {
      */
     private String getS3Key(Long boardId, String originalFileName) {
         return new StringBuffer()
-                .append(this.getPath(boardId))
-                .append(originalFileName)
-                .toString();
+                        .append(this.getPath(boardId))
+                        .append(originalFileName)
+                        .toString();
     }
 
     /**
@@ -181,13 +186,16 @@ public class AttachmentService {
      * @return
      */
     public boolean hasAccess(AuthUser authUser, Long boardId) {
-        boolean isWriter = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
-        isWriter = isWriter || this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+        boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
 
-        if (!isWriter) {
-            throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
+        if (isAdmin) {
+            boolean isWriter = this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+
+            if (!isWriter) {
+                throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
+            }
         }
 
-        return isWriter;
+        return true;
     }
 }

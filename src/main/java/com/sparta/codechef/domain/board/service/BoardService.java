@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.board.service;
 
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
