@@ -160,7 +160,7 @@ public class WSChatRepository {
         }
 
         chatRoomList = chatRoomList.stream().filter(Objects::nonNull).toList();
-        List<ChatRoomGetResponse> responseList = IntStream.range(start, end)
+        List<ChatRoomGetResponse> responseList = IntStream.range(start, (int) Math.min(end, totalChatRoom))
                 .mapToObj(chatRoomList::get)
                 .map(chatRoom -> new ChatRoomGetResponse(
                         chatRoom.getId(),
@@ -185,7 +185,10 @@ public class WSChatRepository {
         List<WSMessage> messageList = new ArrayList<>();
 
         try {
-            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId - 1, roomId)).stream().map(o -> Long.parseLong(String.valueOf(o))).toList();
+            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
+                    .stream()
+                    .map(o -> Long.parseLong(String.valueOf(o)))
+                    .toList();
             this.messageRepository.findAllById(messageIdList).forEach(messageList::add);
 
             return messageList.stream().filter(Objects::nonNull)
@@ -214,19 +217,26 @@ public class WSChatRepository {
 
         List<WSMessage> messageList = new ArrayList<>();
         try {
-            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId - 1, roomId)).stream().map(o -> Long.parseLong(String.valueOf(o))).toList();
+            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
+                    .stream()
+                    .map(o -> Long.parseLong(String.valueOf(o)))
+                    .toList();
             this.messageRepository.findAllById(messageIdList).forEach(messageList::add);
-            long totalChatRoom = messageList.size();
+            long totalMessage = messageList.size();
 
-            if (totalChatRoom < start || totalChatRoom == 0) {
+            if (totalMessage < start || totalMessage == 0) {
                 return new PageImpl<>(List.of(), pageable, 0);
             }
 
             messageList = messageList.stream().filter(Objects::nonNull)
                     .sorted((m1, m2) -> (int)(m1.getId() - m2.getId()))
                     .toList();
-            messageList = IntStream.range(start, end).mapToObj(messageList::get).toList();
-            return new PageImpl<>(messageList, pageable, totalChatRoom);
+
+            messageList = IntStream.range(start, (int) Math.min(end, totalMessage))
+                    .mapToObj(messageList::get)
+                    .toList();
+
+            return new PageImpl<>(messageList, pageable, totalMessage);
 
         } catch (NullPointerException e) {
             return null;
@@ -237,5 +247,6 @@ public class WSChatRepository {
         this.redisTemplate.opsForZSet().add(CHAT_ROOM_MESSAGE_KEY, wsMessage.getId(), wsMessage.getRoomId());
         this.messageRepository.save(wsMessage);
     }
+
 }
 
