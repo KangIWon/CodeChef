@@ -37,6 +37,10 @@ public class AttachmentService {
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
     public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
+        if (fileList.isEmpty()) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
 
         return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
