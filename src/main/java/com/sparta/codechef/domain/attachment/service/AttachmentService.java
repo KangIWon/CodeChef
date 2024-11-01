@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,8 @@ public class AttachmentService {
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
     public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
+        fileList = fileList.stream().filter(Objects::nonNull).filter(file -> !file.getOriginalFilename().isBlank()).toList();
+
         if (fileList.isEmpty()) {
             throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
         }
@@ -159,9 +162,9 @@ public class AttachmentService {
      */
     private String getS3Key(Long boardId, String originalFileName) {
         return new StringBuffer()
-                .append(this.getPath(boardId))
-                .append(originalFileName)
-                .toString();
+                        .append(this.getPath(boardId))
+                        .append(originalFileName)
+                        .toString();
     }
 
     /**
