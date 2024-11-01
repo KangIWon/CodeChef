@@ -22,6 +22,14 @@ public class ChatRoomGetResponse {
         this.maxParticipants = maxParticipants;
     }
 
+    public ChatRoomGetResponse(Long id, String title, boolean isSecret, Long curParticipants, int maxParticipants) {
+        this.id = id;
+        this.title = title;
+        this.isSecret = isSecret;
+        this.curParticipants = curParticipants.intValue();
+        this.maxParticipants = maxParticipants;
+    }
+
     public ChatRoomGetResponse(WSChatRoom chatRoom) {
         this.id = chatRoom.getId();
         this.title = chatRoom.getTitle();
