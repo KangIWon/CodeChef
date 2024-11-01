@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -52,6 +53,7 @@ public class BoardService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final CommentRepository commentRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final AtomicInteger retryCounter = new AtomicInteger(0);
 
     /**
      * 게시물 작성
@@ -185,56 +187,52 @@ public class BoardService {
     @Retryable(
             value = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 3,
-            backoff = @Backoff(delay = 1000)
+            backoff = @Backoff(delay = 200)
     )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-        int retryCount = 0;
+        ObjectOptimisticLockingFailureException e = null;
+        int attempt = retryCounter.incrementAndGet();
+        log.warn("Optimistic locking failed. Retry attempt: {}", attempt);
+        // 재시도가 모두 실패한 경우 처리
+        if (attempt > 3) {
+            log.info("실패함");
+            retryCounter.set(0);
+            return handleOptimisticLockFailure(e, authUser, boardId);
+        }
 
         log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
-        while (true) {
-            try {
-                Board board = boardRepository.findById(boardId)
-                        .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-                List<Comment> commentList = commentRepository.findByBoardId(boardId)
-                        .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
+        List<Comment> commentList = commentRepository.findByBoardId(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
-                // 데이터베이스에서 조회수 증가 처리
-                incrementDatabaseViewCount(board);
+        // 데이터베이스에서 조회수 증가 처리
+        incrementDatabaseViewCount(board);
 
-                // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
-                publishViewCountEvent(authUser, boardId);
+        // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
+        publishViewCountEvent(authUser, boardId);
 
-                log.info("성공임");
-                log.info("Successfully retrieved board details for boardId: {}", boardId);
-                // 조회수 증가가 반영된 보드 정보를 반환
-                return new BoardDetailResponse(
-                        board.getId(),
-                        board.getUser().getId(),
-                        board.getTitle(),
-                        board.getContents(),
-                        board.getLanguage().name(),
-                        board.getFramework(),
-                        board.getViewCount(),
-                        commentList.stream().map(comment -> new CommentResponse(
-                                comment.getId(),
-                                comment.getContent(),
-                                comment.getUser().getId(),
-                                comment.getBoard().getId(),
-                                comment.getIsAdopted())).toList()
-                );
-            } catch (ObjectOptimisticLockingFailureException e) {
-                retryCount++;
-                log.warn("Optimistic locking failed. Retry attempt: {}", retryCount);
-                log.info("실패함");
-                // 재시도가 모두 실패한 경우 처리
-                if (retryCount >= 3) {
-                    return handleOptimisticLockFailure(e, authUser, boardId);
-                }
-            }
-        }
+        log.info("성공임");
+        log.info("Successfully retrieved board details for boardId: {}", boardId);
+        // 조회수 증가가 반영된 보드 정보를 반환
+        return new BoardDetailResponse(
+                board.getId(),
+                board.getUser().getId(),
+                board.getTitle(),
+                board.getContents(),
+                board.getLanguage().name(),
+                board.getFramework(),
+                board.getViewCount(),
+                commentList.stream().map(comment -> new CommentResponse(
+                        comment.getId(),
+                        comment.getContent(),
+                        comment.getUser().getId(),
+                        comment.getBoard().getId(),
+                        comment.getIsAdopted())).toList()
+        );
     }
 
     // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
