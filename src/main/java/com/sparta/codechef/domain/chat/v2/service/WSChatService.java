@@ -104,7 +104,7 @@ public class WSChatService {
      * @param userId : 유저 id
      */
     public void subscribeChatRoom(Long roomId, Long userId, String password) {
-        log.info("입장");
+
         WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
@@ -112,21 +112,20 @@ public class WSChatService {
         if (chatUser.getRoomId() != null) {
             throw new ApiException(ErrorStatus.ALREADY_IN_CHATROOM);
         }
-        log.info("채팅방 조회");
+
         WSChatRoom chatRoom = this.chatRoomRepository.findById(roomId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHATROOM)
         );
 
         String chatRoomPassword = chatRoom.getPassword();
 
-        log.info("비밀번호 체크");
         if (chatRoomPassword != null) {
             boolean isSame = false;
-            log.info("isSame: {}", isSame);
+
             if (password != null) {
                 isSame = passwordEncoder.matches(password, chatRoomPassword);
             }
-            log.info("isSame: {}", isSame);
+
             if (!isSame) {
                 throw new ApiException(ErrorStatus.ACCESS_DENIED_NOT_CORRECT_PASSWORD);
             }
