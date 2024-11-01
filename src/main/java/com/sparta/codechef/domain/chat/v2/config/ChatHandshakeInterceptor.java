@@ -12,14 +12,13 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Map;
 
-@Slf4j
 @RequiredArgsConstructor
 public class ChatHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtUtil jwtUtil;
 
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) {
         String token = this.extractTokenFromRequest(request);
 
         if (token != null && jwtUtil.validateToken(token)) {

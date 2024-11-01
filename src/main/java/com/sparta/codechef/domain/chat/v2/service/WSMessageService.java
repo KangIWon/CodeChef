@@ -6,7 +6,10 @@ import com.sparta.codechef.domain.chat.v2.entity.WSMessage;
 import com.sparta.codechef.domain.chat.v2.repository.WSChatRepository;
 import com.sparta.codechef.domain.chat.v2.repository.WSMessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -14,6 +17,8 @@ public class WSMessageService {
 
     private final WSChatRepository chatRepository;
     private final WSMessageRepository messageRepository;
+
+    private static final String MESSAGE_KEY = "message";
 
 
     /**
@@ -35,11 +40,14 @@ public class WSMessageService {
      * @param email : 입장한 유저 이메일
      * @return
      */
-    public WSMessage subscribeChatRoom(Long roomId, String email) {
+    public List<WSMessage> subscribeChatRoom(Long roomId, String email) {
         String content = new StringBuffer(email)
                 .append("님이 채팅방에 입장하셨습니다.")
                 .toString();
-        return new WSMessage(null, roomId, null, content);
+
+        List<WSMessage> messageList = this.chatRepository.getMessagesByRoomId(roomId);
+        messageList.add(new WSMessage(this.chatRepository.generateId(MESSAGE_KEY), roomId, null, content));
+        return messageList;
     }
 
     /**
@@ -50,11 +58,11 @@ public class WSMessageService {
      * @return
      */
     public WSMessage sendMessage(WSChatUser chatUser, Long roomId, String content) {
-        Long messageId = this.chatRepository.generateId("message");
+        Long messageId = this.chatRepository.generateId(MESSAGE_KEY);
         ChatUserResponse sender = new ChatUserResponse(chatUser);
 
         WSMessage wsMessage = new WSMessage(messageId, roomId, sender, content);
-        this.messageRepository.save(wsMessage);
+        this.chatRepository.saveMessage(wsMessage);
 
         return wsMessage;
     }

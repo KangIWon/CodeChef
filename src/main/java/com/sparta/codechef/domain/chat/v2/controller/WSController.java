@@ -7,6 +7,7 @@ import com.sparta.codechef.domain.chat.v2.entity.WSMessage;
 import com.sparta.codechef.domain.chat.v2.service.WSMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -15,6 +16,7 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j(topic = "WSController")
@@ -52,8 +54,8 @@ public class WSController {
      */
     @SubscribeMapping("/chat-room/{roomId}/enter")
     @SendTo("/topic/chat-room/{roomId}")
-    public WSMessage handleSubscription(@DestinationVariable Long roomId,
-                                     SimpMessageHeaderAccessor headerAccessor
+    public List<WSMessage> handleSubscription(@DestinationVariable Long roomId,
+                                              SimpMessageHeaderAccessor headerAccessor
     ) {
         WSChatUser chatUser = this.getChatUser(headerAccessor);
         log.info("채팅방 입장 : chat-room-{}, host : {}", roomId, chatUser.getId());

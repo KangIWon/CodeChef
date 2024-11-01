@@ -1,9 +1,12 @@
 package com.sparta.codechef.domain.chat.v1.dto.response;
 
+import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 
 @Getter
+@AllArgsConstructor
 public class ChatRoomGetResponse {
     private final Long id;
     private final String title;
@@ -17,5 +20,13 @@ public class ChatRoomGetResponse {
         this.isSecret = password != null;
         this.curParticipants = curParticipants;
         this.maxParticipants = maxParticipants;
+    }
+
+    public ChatRoomGetResponse(WSChatRoom chatRoom) {
+        this.id = chatRoom.getId();
+        this.title = chatRoom.getTitle();
+        this.isSecret = chatRoom.getPassword() != null;
+        this.curParticipants = chatRoom.getCurParticipants();
+        this.maxParticipants = chatRoom.getMaxParticipants();
     }
 }

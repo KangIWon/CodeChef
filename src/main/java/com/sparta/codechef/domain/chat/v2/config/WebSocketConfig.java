@@ -25,6 +25,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")  // STOMP 엔드포인트
                 .addInterceptors(new ChatHandshakeInterceptor(jwtUtil))
-                .setAllowedOriginPatterns("http://localhost:63342");
+                .setAllowedOriginPatterns("*");
     }
 }
