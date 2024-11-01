@@ -171,13 +171,14 @@ public class ChatRoomService {
 
     // 방장 권한 체크용
     public boolean hasAccess(AuthUser authUser, Long chatRoomId) {
-        boolean isHost = this.chatRoomRepository.existsByIdAndUserId(chatRoomId, authUser.getUserId());
-        boolean isAdmin = authUser.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> auth.equals(UserRole.ROLE_ADMIN.name()));
+        boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
 
-        if (!isHost && !isAdmin) {
-            throw new ApiException(ErrorStatus.NOT_CHATROOM_HOST);
+        if (!isAdmin) {
+            boolean isHost = this.chatRoomRepository.existsByIdAndUserId(chatRoomId, authUser.getUserId());
+
+            if (!isHost) {
+                throw new ApiException(ErrorStatus.NOT_CHATROOM_HOST);
+            }
         }
 
         return true;
