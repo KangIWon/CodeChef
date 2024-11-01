@@ -32,7 +32,7 @@ public class WSController {
      * @param headerAccessor : 인증 유저 정보를 얻기 위한 headerAccessor
      * @return
      */
-    @MessageMapping("/chat-room/{roomId}/create")
+    @SubscribeMapping("/chat-room/{roomId}/create")
     @SendTo("/topic/chat-room/{roomId}")
     public WSMessage handleCreateChatRoom(
             @DestinationVariable Long roomId,
