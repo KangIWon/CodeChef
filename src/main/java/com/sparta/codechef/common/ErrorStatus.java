@@ -43,6 +43,7 @@ public enum ErrorStatus implements BaseCode {
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
     FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
     FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
+    EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가할 첨부파일 목록이 없습니다."),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
@@ -92,7 +93,6 @@ public enum ErrorStatus implements BaseCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
 
     EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
-    JSON_PARSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 500, "JSON 타입으로 데이터 변환 중 예외가 발생하였습니다."),
     NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다.");
 
     private final HttpStatus httpStatus;

@@ -38,7 +38,18 @@ public class Board extends Timestamped {
     @Column(name = "framework", nullable = false)
     private Framework framework;
 
+    @Column(nullable = false)
+    private Long viewCount = 0L;
 
+//    @Version // 낙관적 락 적용을 위한 버전 필드
+//    private Long version = 0L;
+
+    public void setViewCount() {
+        if (viewCount == null) {
+            viewCount = 0L;
+        }
+        viewCount++;
+    }
 
     public void BoardModify(String title,
                             String contents,

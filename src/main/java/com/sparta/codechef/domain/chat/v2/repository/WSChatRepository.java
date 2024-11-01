@@ -96,7 +96,7 @@ public class WSChatRepository {
      * @param roomId : 채팅방 ID
      */
     public void successChatRoomHost(Long roomId, Long userId) {
-        Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().range(SUBSCRIBE_CHAT_ROOM_KEY, roomId - 1, roomId);
+        Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().range(SUBSCRIBE_CHAT_ROOM_KEY, roomId, roomId);
 
         if (userIdSet == null || userIdSet.isEmpty()) {
             return;

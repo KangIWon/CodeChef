@@ -52,11 +52,19 @@ function createRoom(user) {
 
     const stompClient = user === "User1" ? stompClientUser1 : stompClientUser2;
     if (stompClient && stompClient.connected) {
+        // 채팅방 생성과 동시에 구독
         stompClient.subscribe(`/topic/chat-room/${roomId}`, (message) => showMessage(user, message));
+
+        // 채팅방 생성 요청 전송
         stompClient.send(`/app/chat-room/${roomId}/create`, {});
-        if (user === "User1") isRoomOwnerUser1 = true;
-        else isRoomOwnerUser2 = true;
-        showMessage(user, `채팅방 ${roomId}이 생성되었습니다.`);
+
+        if (user === "User1") {
+            isRoomOwnerUser1 = true;
+        } else {
+            isRoomOwnerUser2 = true;
+        }
+
+        showMessage(user, `채팅방 ${roomId}이 생성되고 구독이 완료되었습니다.`);
     }
 }
 
