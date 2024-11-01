@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.board.service;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
+import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
@@ -29,6 +30,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -205,40 +207,15 @@ public class BoardService {
      * @param boardId : 조회 하려는 게시물 번호
      * */
     // 보드 조회수 증가 및 조회
-//    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    // Board 조회 및 데이터 반환
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
+        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-//      아래 코드 어뷰징 확인하는 코드임
-//        incrementViewCount(redisViewKey, authUser.getUserId().toString());
+        List<Comment> commentList = commentRepository.findByBoardId(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
-        // 비관적 락으로 보드 조회
-        Board board = boardRepository.findByIdWithPessimisticLock(boardId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-        );
-
-        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
-        );
-
-        // 엔티티에는 전체 조회수를 저장해주기 위해 레디스 값(실시간 조회수 값)을 저장하는 것이 아니라 그냥 계속 조회수를 증가하는 방식으로 업데이트
-        // 엔티티의 조회수 업데이트
-        board.setViewCount();  // 조회수 증가
-        boardRepository.save(board);  // 업데이트 반영
-
-        String redisViewKey = "board:viewcount:" + boardId;
-
-        // Redis에서 보드 조회수 가져오기 (증가)
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
-
-        // Transactional 확인하기 위해 예외 발생
-        if (true) {
-            throw new RuntimeException(); // 예외발생
-        }
-
-        // 랭킹 업데이트 (Sorted Set에 추가)
-        updateRanking(boardId, viewCount);
-        // 응답 데이터 생성
         return new BoardDetailResponse(
                 board.getId(),
                 board.getUser().getId(),
@@ -254,6 +231,32 @@ public class BoardService {
                         comment.getBoard().getId(),
                         comment.getIsAdopted())).toList()
         );
+    }
+
+    // 조회수 증가 비동기 처리
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void incrementViewCount(BoardDetailEvent event) {
+        AuthUser authUser = event.getAuthUser();
+        Long boardId = event.getBoardId();
+
+        String redisViewKey = "board:viewcount:" + boardId;
+        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
+
+        // 아래 코드 어뷰징 확인하는 코드임
+        // incrementViewCount(redisViewKey, authUser.getUserId().toString());
+
+        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+
+        board.setViewCount();  // 조회수 증가
+        boardRepository.save(board);
+
+        if (true) {
+            throw new RuntimeException(); // 예외 발생
+        }
+
+        // 랭킹 업데이트
+        updateRanking(boardId, viewCount);
     }
 
     // 랭킹 업데이트
