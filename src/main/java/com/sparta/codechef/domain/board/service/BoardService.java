@@ -208,17 +208,9 @@ public class BoardService {
 //    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-        String redisViewKey = "board:viewcount:" + boardId;
+
 //      아래 코드 어뷰징 확인하는 코드임
 //        incrementViewCount(redisViewKey, authUser.getUserId().toString());
-
-        // Redis에서 보드 조회수 가져오기 (증가)
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
-
-        // Transactional 확인하기 위해 예외 발생
-        if (true) {
-            throw new RuntimeException(); // 예외발생
-        }
 
         // 비관적 락으로 보드 조회
         Board board = boardRepository.findByIdWithPessimisticLock(boardId).orElseThrow(
@@ -233,6 +225,16 @@ public class BoardService {
         // 엔티티의 조회수 업데이트
         board.setViewCount();  // 조회수 증가
         boardRepository.save(board);  // 업데이트 반영
+
+        String redisViewKey = "board:viewcount:" + boardId;
+
+        // Redis에서 보드 조회수 가져오기 (증가)
+        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
+
+        // Transactional 확인하기 위해 예외 발생
+        if (true) {
+            throw new RuntimeException(); // 예외발생
+        }
 
         // 랭킹 업데이트 (Sorted Set에 추가)
         updateRanking(boardId, viewCount);
