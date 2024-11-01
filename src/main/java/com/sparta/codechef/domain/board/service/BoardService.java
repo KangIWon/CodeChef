@@ -17,6 +17,7 @@ import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +48,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final CommentRepository commentRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 게시물 작성
@@ -87,36 +89,6 @@ public class BoardService {
                         board.getLanguage().toString(),
                         board.getFramework()));  // 결과를 List로 반환
     }
-
-//    /**
-//     * 게시물 단건 조회
-//     * @param boardId : 보려고 하는 게시물 번호
-//     * */
-//    public BoardDetailResponse getBoard(Long boardId) {
-//
-//        Board savedBoard = boardRepository.findById(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-//        );
-//
-//        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
-//        );
-//
-//
-//        return new BoardDetailResponse(savedBoard.getId(),
-//                savedBoard.getUser().getId(),
-//                savedBoard.getTitle(),
-//                savedBoard.getContents(),
-//                savedBoard.getLanguage().toString(),
-//                savedBoard.getFramework(),
-//                commentList.stream().map(comment -> new CommentResponse(
-//                        comment.getId(),
-//                        comment.getContent(),
-//                        comment.getUser().getId(),
-//                        comment.getBoard().getId(),
-//                        comment.getIsAdopted())).toList());
-//
-//    }
 
     /**
      * 게시물 수정
@@ -208,6 +180,8 @@ public class BoardService {
      * */
     // 보드 조회수 증가 및 조회
     // Board 조회 및 데이터 반환
+    // Board 조회 및 조회수 증가
+// Board 조회 및 조회수 증가
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
         Board board = boardRepository.findByIdWithPessimisticLock(boardId)
@@ -216,6 +190,13 @@ public class BoardService {
         List<Comment> commentList = commentRepository.findByBoardId(boardId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
+        // 데이터베이스에서 조회수 증가 처리
+        incrementDatabaseViewCount(board);
+
+        // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
+        publishViewCountEvent(authUser, boardId);
+
+        // 조회수 증가가 반영된 보드 정보를 반환
         return new BoardDetailResponse(
                 board.getId(),
                 board.getUser().getId(),
@@ -233,31 +214,33 @@ public class BoardService {
         );
     }
 
-    // 조회수 증가 비동기 처리
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void incrementViewCount(BoardDetailEvent event) {
-        AuthUser authUser = event.getAuthUser();
-        Long boardId = event.getBoardId();
-
-        String redisViewKey = "board:viewcount:" + boardId;
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
-
-        // 아래 코드 어뷰징 확인하는 코드임
-        // incrementViewCount(redisViewKey, authUser.getUserId().toString());
-
-        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
-
-        board.setViewCount();  // 조회수 증가
-        boardRepository.save(board);
-
-        if (true) {
-            throw new RuntimeException(); // 예외 발생
-        }
-
-        // 랭킹 업데이트
-        updateRanking(boardId, viewCount);
+    // 데이터베이스의 조회수 증가
+    public void incrementDatabaseViewCount(Board board) {
+        board.setViewCount(); // 조회수 증가
+        boardRepository.save(board); // 업데이트 반영
     }
+
+    // 트랜잭션 커밋 후 이벤트 발행
+    public void publishViewCountEvent(AuthUser authUser, Long boardId) {
+        applicationEventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
+    }
+
+    // 트랜잭션 커밋 후에 Redis 조회수 증가 이벤트 처리
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleViewCountIncrement(BoardDetailEvent event) {
+        String redisViewKey = "board:viewcount:" + event.getBoardId();
+//        // 아래 코드 어뷰징 확인하는 코드임
+//        incrementViewCount(redisViewKey, event.getAuthUser().getUserId().toString());
+        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
+        updateRanking(event.getBoardId(), viewCount);
+    }
+
+
+
+//    Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);//0); 어뷰징 방지를 위해 코드를 수정해야함
+//
+//    // 아래 코드 어뷰징 확인하는 코드임
+//    // incrementViewCount(redisViewKey, authUser.getUserId().toString());
 
     // 랭킹 업데이트
     private void updateRanking(Long boardId, Long viewCount) {
