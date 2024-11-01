@@ -2,7 +2,9 @@ package com.sparta.codechef.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import io.lettuce.core.RedisClient;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -48,7 +50,18 @@ public class RedisConfig {
         return redisTemplate;
     }
 
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        config.useSentinelServers()
+                .setMasterName("mymaster")
+                .setCheckSentinelsList(false) // Sentinel 최소 개수 체크 비활성화
+                .addSentinelAddress("redis://" + localhost + ":26379",
+                        "redis://" + localhost + ":26380",
+                        "redis://" + localhost + ":26381");
 
+        return Redisson.create(config);
+    }
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
