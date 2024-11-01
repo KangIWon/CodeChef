@@ -53,6 +53,9 @@ public class User extends Timestamped {
     @Column
     private LocalDateTime blockUntil;
 
+    @Version
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
