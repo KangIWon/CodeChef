@@ -28,6 +28,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -204,6 +205,7 @@ public class BoardService {
      * @param boardId : 조회 하려는 게시물 번호
      * */
     // 보드 조회수 증가 및 조회
+//    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
         String redisViewKey = "board:viewcount:" + boardId;
@@ -212,6 +214,11 @@ public class BoardService {
 
         // Redis에서 보드 조회수 가져오기 (증가)
         Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
+
+        // Transactional 확인하기 위해 예외 발생
+        if (true) {
+            throw new RuntimeException(); // 예외발생
+        }
 
         // 비관적 락으로 보드 조회
         Board board = boardRepository.findByIdWithPessimisticLock(boardId).orElseThrow(
@@ -305,7 +312,7 @@ public class BoardService {
     // 매 시간마다 캐시 리셋
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
-    public void resetDailyViewCount2() {
+    public void resetDailyViewCount() {
         String pattern = "board:viewcount:*";
         Set<String> keys = redisTemplate.keys(pattern);
         if (keys != null && !keys.isEmpty()) {
