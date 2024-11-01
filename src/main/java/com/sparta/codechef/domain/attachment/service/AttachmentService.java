@@ -24,9 +24,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AttachmentService {
 
-    private final AmazonS3 amazonS3;
     private final BoardRepository boardRepository;
-    private final AmazonS3Client amazonS3Client;
+    private final AmazonS3 amazonS3;
 
     @Value("${s3.bucket}")
     private String bucketName;
@@ -57,7 +56,7 @@ public class AttachmentService {
         };
 
         return this.getKeyListFromS3(boardId).stream().map(key -> {
-            String s3Url = amazonS3Client.getUrl(bucketName, key).toString();
+            String s3Url = amazonS3.getUrl(bucketName, key).toString();
 
             return new AttachmentResponse(
                     this.getOriginalFileName(boardId, key),
@@ -87,7 +86,7 @@ public class AttachmentService {
                 .withBucketName(bucketName)
                 .withPrefix(this.getPath(boardId));
 
-        ListObjectsV2Result result = amazonS3Client.listObjectsV2(request);
+        ListObjectsV2Result result = amazonS3.listObjectsV2(request);
 
         return result.getObjectSummaries().stream()
                 .map(S3ObjectSummary::getKey)
@@ -108,7 +107,7 @@ public class AttachmentService {
         metadata.setContentType(file.getContentType());
 
         try {
-            amazonS3Client.putObject(bucketName, s3Key, file.getInputStream(), metadata);
+            amazonS3.putObject(bucketName, s3Key, file.getInputStream(), metadata);
 
         } catch (IOException e) {
             throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
@@ -116,7 +115,7 @@ public class AttachmentService {
 
         return new AttachmentResponse(
                 file.getOriginalFilename(),
-                amazonS3Client.getUrl(bucketName, s3Key).toString()
+                amazonS3.getUrl(bucketName, s3Key).toString()
         );
     }
 
@@ -126,7 +125,7 @@ public class AttachmentService {
      */
     public void deleteFile(String key) {
         try {
-            amazonS3Client.deleteObject(bucketName, key);
+            amazonS3.deleteObject(bucketName, key);
         } catch (Exception e) {
             throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
         }
@@ -180,13 +179,16 @@ public class AttachmentService {
      * @return
      */
     public boolean hasAccess(AuthUser authUser, Long boardId) {
-        boolean isWriter = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
-        isWriter = isWriter || this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+        boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
 
-        if (!isWriter) {
-            throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
+        if (isAdmin) {
+            boolean isWriter = this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+
+            if (!isWriter) {
+                throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
+            }
         }
 
-        return isWriter;
+        return true;
     }
 }
