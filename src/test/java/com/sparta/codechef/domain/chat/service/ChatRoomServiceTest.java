@@ -2,12 +2,13 @@
 //
 //import com.sparta.codechef.common.ErrorStatus;
 //import com.sparta.codechef.common.exception.ApiException;
-//import com.sparta.codechef.domain.chat.dto.request.ChatRoomCreateRequest;
-//import com.sparta.codechef.domain.chat.dto.request.ChatRoomRequest;
-//import com.sparta.codechef.domain.chat.dto.response.ChatRoomGetResponse;
-//import com.sparta.codechef.domain.chat.dto.response.ChatRoomResponse;
-//import com.sparta.codechef.domain.chat.entity.ChatRoom;
-//import com.sparta.codechef.domain.chat.repository.chat_room.ChatRoomRepository;
+//import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
+//import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
+//import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
+//import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+//import com.sparta.codechef.domain.chat.v1.entity.ChatRoom;
+//import com.sparta.codechef.domain.chat.v1.repository.chat_room.ChatRoomRepository;
+//import com.sparta.codechef.domain.chat.v1.service.ChatRoomService;
 //import com.sparta.codechef.domain.user.entity.User;
 //import com.sparta.codechef.domain.user.repository.UserRepository;
 //import org.junit.jupiter.api.Nested;
@@ -84,7 +85,8 @@
 //            int page = 0;
 //            int size = 10;
 //            Pageable pageable = PageRequest.of(page, size, Sort.by("id"));
-//            Page<ChatRoomGetResponse> chatRoomList = new PageImpl<>(List.of(spy(ChatRoomGetResponse.class), spy(ChatRoomGetResponse.class)), pageable, 2);
+//            ChatRoomGetResponse chatRoomGetResponse = new ChatRoomGetResponse(1L, "title", false, 5, 10);
+//            Page<ChatRoomGetResponse> chatRoomList = new PageImpl<>(List.of(chatRoomGetResponse), pageable, 1);
 //
 //            given(chatRoomRepository.findAllChatRoom(any(Pageable.class))).willReturn(chatRoomList);
 //
@@ -101,15 +103,14 @@
 //    }
 //
 //    @Nested
-//    class UpdateChatRoomTest{
+//    class UpdateChatRoomTest {
 //        @Test
 //        public void 채팅방을_찾을_수_없어_실패() {
 //            // given
-//            Long userId = 1L;
 //            Long chatRoomId = 1L;
-//            ChatRoomRequest request = spy(ChatRoomRequest.class);
+//            ChatRoomRequest request = new ChatRoomRequest(null, null, null);
 //
-//            given(chatRoomRepository.findByIdAndUser(anyLong(), anyLong())).willReturn(Optional.empty());
+//            given(chatRoomRepository.findExistChatRoomById(anyLong())).willReturn(Optional.empty());
 //
 //            // when & then
 //            ApiException exception = assertThrows(ApiException.class, () -> chatRoomService.updateChatRoom(chatRoomId, request));
@@ -128,7 +129,7 @@
 //                    .maxParticipants(2)
 //                    .build();
 //
-//            given(chatRoomRepository.findByIdAndUser(anyLong(), anyLong())).willReturn(Optional.of(chatRoom));
+//            given(chatRoomRepository.findExistChatRoomById(anyLong())).willReturn(Optional.of(chatRoom));
 //            chatRoom.updateRoomInfo(request.getTitle(), request.getPassword(), request.getMaxParticipants());
 //            given(chatRoomRepository.save(any(ChatRoom.class))).willReturn(chatRoom);
 //
@@ -136,7 +137,7 @@
 //            ChatRoomResponse response = chatRoomService.updateChatRoom(chatRoomId, request);
 //
 //            //then
-//            verify(chatRoomRepository, times(1)).findByIdAndUser(anyLong(), anyLong());
+//            verify(chatRoomRepository, times(1)).findExistChatRoomById(anyLong());
 //            verify(chatRoomRepository, times(1)).save(any(ChatRoom.class));
 //            assertInstanceOf(ChatRoomResponse.class, response);
 //            assertEquals(request.getTitle(), response.getTitle());

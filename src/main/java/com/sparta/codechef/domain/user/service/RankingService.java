@@ -9,6 +9,7 @@ import com.sparta.codechef.domain.user.dto.response.UserRankingTop3;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -35,10 +36,12 @@ public class RankingService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper jacksonObjectMapper;
 
+
     @PostConstruct
     public void init() {
         updateUserPoint();
     }
+
 
     public void updateUserPoint() {
         List<User> all = userRepository.findAll();
