@@ -147,7 +147,6 @@ public class BoardService {
         Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<Board> boards = boardRepository.boardSearch(title, content, pageable);
 
-
         return boards.map(board -> new BoardResponse(
                 board.getId(),
                 board.getUser().getId(),
@@ -169,7 +168,6 @@ public class BoardService {
         Page<Board> allById = boardRepository.findAllByUserId(authUser.getUserId(), pageable).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
         );
-
 
         return allById.map(board -> new BoardResponse(
                 board.getId(),
@@ -249,7 +247,6 @@ public class BoardService {
     public void handleViewCountIncrement(BoardDetailEvent event) {
         String redisViewKey = "board:viewcount:" + event.getBoardId();
 
-        // Redis에 초기 조회수 설정 후 증가
         Long viewCount = redisTemplate.opsForValue().get(redisViewKey) != null
                 ? redisTemplate.opsForValue().increment(redisViewKey)
                 : redisTemplate.opsForValue().increment(redisViewKey, 0);
