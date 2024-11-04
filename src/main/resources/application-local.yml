@@ -50,3 +50,6 @@ s3:
     secret-key: ${S3_CREDENTIALS_SECRET_KEY}
     region: ${S3_CREDENTIALS_REGION}
   bucket: ${S3_BUCKET}
+
+cloudfront:
+  url: ${CLOUD_FRONT_URL}

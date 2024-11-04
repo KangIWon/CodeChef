@@ -1,7 +1,6 @@
 package com.sparta.codechef.domain.attachment.service;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -29,7 +28,13 @@ public class AttachmentService {
     private final AmazonS3 amazonS3;
 
     @Value("${s3.bucket}")
-    private String bucketName;
+    private String S3_BUCKET;
+
+    @Value("${cloudfront.url}")
+    private String CLOUD_FRONT_URL;
+
+    private final Long MAX_FILE_SIZE = 5 * 1024 * 1024L;  // 단일 파일 최대 용량 : 5MB
+    private final Long MAX_REQUEST_SIZE = 10 * 1024 * 1024L;  // 전체 업로드 파일 최대 용량 : 10MB
 
     /**
      * 첨부파일 추가
@@ -38,13 +43,8 @@ public class AttachmentService {
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
     public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
-        fileList = fileList.stream().filter(Objects::nonNull).filter(file -> !file.getOriginalFilename().isBlank()).toList();
-
-        if (fileList.isEmpty()) {
-            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
-        }
-
-        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
+        this.validateAttachmentFiles(fileList);
+        this.deleteFiles(boardId);
 
         return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
     }
@@ -62,14 +62,12 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
         };
 
-        return this.getKeyListFromS3(boardId).stream().map(key -> {
-            String s3Url = amazonS3.getUrl(bucketName, key).toString();
-
-            return new AttachmentResponse(
+        return this.getKeyListFromS3(boardId).stream().map(key ->
+                new AttachmentResponse(
                     this.getOriginalFileName(boardId, key),
-                    s3Url
-            );
-        }).toList();
+                    this.getCdnUrl(key)
+                )
+        ).toList();
     }
 
 
@@ -90,7 +88,7 @@ public class AttachmentService {
      */
     public List<String> getKeyListFromS3(Long boardId) {
         ListObjectsV2Request request = new ListObjectsV2Request()
-                .withBucketName(bucketName)
+                .withBucketName(S3_BUCKET)
                 .withPrefix(this.getPath(boardId));
 
         ListObjectsV2Result result = amazonS3.listObjectsV2(request);
@@ -114,7 +112,7 @@ public class AttachmentService {
         metadata.setContentType(file.getContentType());
 
         try {
-            amazonS3.putObject(bucketName, s3Key, file.getInputStream(), metadata);
+            amazonS3.putObject(S3_BUCKET, s3Key, file.getInputStream(), metadata);
 
         } catch (IOException e) {
             throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
@@ -122,7 +120,7 @@ public class AttachmentService {
 
         return new AttachmentResponse(
                 file.getOriginalFilename(),
-                amazonS3.getUrl(bucketName, s3Key).toString()
+                this.getCdnUrl(s3Key)
         );
     }
 
@@ -132,7 +130,7 @@ public class AttachmentService {
      */
     public void deleteFile(String key) {
         try {
-            amazonS3.deleteObject(bucketName, key);
+            amazonS3.deleteObject(S3_BUCKET, key);
         } catch (Exception e) {
             throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
         }
@@ -147,7 +145,7 @@ public class AttachmentService {
      */
     private String getPath(Long boardId) {
         return new StringBuffer()
-                .append("/board")
+                .append("board")
                 .append(boardId)
                 .append("/")
                 .toString();
@@ -161,6 +159,10 @@ public class AttachmentService {
      * @return "/board/{boardId}/{파일명}/{확장자}
      */
     private String getS3Key(Long boardId, String originalFileName) {
+        if (originalFileName.length() > 25) {
+            originalFileName = originalFileName.substring(0, 26);
+        }
+
         return new StringBuffer()
                         .append(this.getPath(boardId))
                         .append(originalFileName)
@@ -175,6 +177,16 @@ public class AttachmentService {
      */
     private String getOriginalFileName(Long boardId, String key) {
         return key.substring(this.getPath(boardId).length());
+    }
+
+
+    // S3 URL 경로 CloudFront URL 변환 메서드
+    private String getCdnUrl(String key) {
+        return new StringBuffer()
+                .append(CLOUD_FRONT_URL)
+                .append("/")
+                .append(key)
+                .toString();
     }
 
 
@@ -197,5 +209,39 @@ public class AttachmentService {
         }
 
         return true;
+    }
+
+    private void validateAttachmentFiles(List<MultipartFile> fileList) {
+        fileList.stream().filter(file -> file.getSize() > MAX_FILE_SIZE).findFirst().ifPresent(file -> {
+            throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+        });
+
+        long totalSize = fileList.stream().mapToLong(MultipartFile::getSize).sum();
+
+        if (totalSize == 0) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
+        if (totalSize > MAX_REQUEST_SIZE) {
+            throw new ApiException(ErrorStatus.MAX_UPLOAD_REQUEST_SIZE_EXCEEDED);
+        }
+
+        long distinctFileNames = fileList.stream().map(MultipartFile::getOriginalFilename).distinct().count();
+
+        if (distinctFileNames != fileList.size()) {
+            throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
+        }
+
+
+        boolean isEmptyAttachmentList = fileList.stream()
+                .filter(Objects::nonNull)
+                .map(MultipartFile::getOriginalFilename)
+                .filter(Objects::nonNull)
+                .filter(fileName -> !fileName.isBlank())
+                .toList().isEmpty();
+
+        if (isEmptyAttachmentList) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
     }
 }
