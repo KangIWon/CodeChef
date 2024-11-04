@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.user.repository.service;
+package com.sparta.codechef.domain.user.service;
 
 
 import com.sparta.codechef.common.ErrorStatus;
