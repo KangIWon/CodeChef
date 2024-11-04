@@ -31,7 +31,6 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
         );
     }
 
-
     @Override
     public boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId) {
         Long countUser = jpaQueryFactory

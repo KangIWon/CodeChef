@@ -53,3 +53,6 @@ s3:
 
 cloudfront:
   url: ${CLOUD_FRONT_URL}
+
+admin:
+  token: ${ADMIN_TOKEN}

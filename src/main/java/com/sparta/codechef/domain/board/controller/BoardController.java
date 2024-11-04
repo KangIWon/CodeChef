@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.board.controller;
 import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.common.annotation.AuthForBoard;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
+import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
@@ -10,6 +11,7 @@ import com.sparta.codechef.domain.board.service.BoardService;
 
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,7 @@ import java.util.List;
 public class BoardController {
 
     private final BoardService boardService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 게시물 작성
@@ -109,8 +112,13 @@ public class BoardController {
     @GetMapping("/{boardId}")
     public ApiResponse<BoardDetailResponse> getBoardDetails(@AuthenticationPrincipal AuthUser authUser,
                                                             @PathVariable Long boardId) {
-        // 사용자 ID를 활용해 어뷰징 방지를 위한 조회수 카운팅
-        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoardDetails(authUser, boardId));
+        // 이벤트 발행: 비동기적으로 조회수 증가 처리
+        eventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
+
+        // 서비스 메서드를 직접 호출하여 결과 반환
+        BoardDetailResponse boardDetailResponse = boardService.getBoardDetails(authUser, boardId);
+
+        return ApiResponse.ok(boardId + "번 게시물 조회 중입니다.", boardDetailResponse);
     }
 
     // 실시간 인기 보드 랭킹 조회

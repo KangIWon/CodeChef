@@ -1,9 +1,9 @@
 package com.sparta.codechef.domain.board.service;
 
 import com.sparta.codechef.common.ErrorStatus;
-import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
+import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
@@ -16,7 +16,9 @@ import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,10 +27,14 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -36,8 +42,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@EnableRetry
 @Transactional(readOnly = true)
 public class BoardService {
 
@@ -45,6 +53,8 @@ public class BoardService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final CommentRepository commentRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
+//    private final AtomicInteger retryCounter = new AtomicInteger(0);
 
     /**
      * 게시물 작성
@@ -63,6 +73,7 @@ public class BoardService {
                 .contents(request.getContents())
                 .language(request.getLanguage())
                 .framework(request.getFramework())
+                .viewCount(0L)
                 .build();
 
         boardRepository.save(board);
@@ -85,36 +96,6 @@ public class BoardService {
                         board.getLanguage().toString(),
                         board.getFramework()));  // 결과를 List로 반환
     }
-
-//    /**
-//     * 게시물 단건 조회
-//     * @param boardId : 보려고 하는 게시물 번호
-//     * */
-//    public BoardDetailResponse getBoard(Long boardId) {
-//
-//        Board savedBoard = boardRepository.findById(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-//        );
-//
-//        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
-//                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
-//        );
-//
-//
-//        return new BoardDetailResponse(savedBoard.getId(),
-//                savedBoard.getUser().getId(),
-//                savedBoard.getTitle(),
-//                savedBoard.getContents(),
-//                savedBoard.getLanguage().toString(),
-//                savedBoard.getFramework(),
-//                commentList.stream().map(comment -> new CommentResponse(
-//                        comment.getId(),
-//                        comment.getContent(),
-//                        comment.getUser().getId(),
-//                        comment.getBoard().getId(),
-//                        comment.getIsAdopted())).toList());
-//
-//    }
 
     /**
      * 게시물 수정
@@ -204,33 +185,40 @@ public class BoardService {
      * @param authUser : 로그인 유저 정보
      * @param boardId : 조회 하려는 게시물 번호
      * */
-    // 보드 조회수 증가 및 조회
+    @Retryable(
+            value = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 200)
+    )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-        String redisViewKey = "board:viewcount:" + boardId;
-//      아래 코드 어뷰징 확인하는 코드임
-//        incrementViewCount(redisViewKey, authUser.getUserId().toString());
+//        ObjectOptimisticLockingFailureException e = null;
+//        int attempt = retryCounter.incrementAndGet();
+//        log.warn("Optimistic locking failed. Retry attempt: {}", attempt);
+        // 재시도가 모두 실패한 경우 처리
+//        if (attempt > 3) {
+//            log.info("실패함");
+//            retryCounter.set(0);
+////            return handleOptimisticLockFailure(e, authUser, boardId);
+//        }
 
-        // Redis에서 보드 조회수 가져오기 (증가)
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);// 어뷰징 확인 이걸로 원래대로 돌려야함 0);
+        log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
-        // 비관적 락으로 보드 조회
-        Board board = boardRepository.findByIdWithPessimisticLock(boardId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-        );
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
-        );
+        List<Comment> commentList = commentRepository.findByBoardId(boardId)
+                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
-        // 엔티티에는 전체 조회수를 저장해주기 위해 레디스 값(실시간 조회수 값)을 저장하는 것이 아니라 그냥 계속 조회수를 증가하는 방식으로 업데이트
-        // 엔티티의 조회수 업데이트
-        board.setViewCount();  // 조회수 증가
-        boardRepository.save(board);  // 업데이트 반영
+        // 데이터베이스에서 조회수 증가 처리
+        incrementDatabaseViewCount(board);
 
-        // 랭킹 업데이트 (Sorted Set에 추가)
-        updateRanking(boardId, viewCount);
-        // 응답 데이터 생성
+        // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
+        publishViewCountEvent(authUser, boardId);
+
+//        log.info("성공임");
+        log.info("Successfully retrieved board details for boardId: {}", boardId);
+        // 조회수 증가가 반영된 보드 정보를 반환
         return new BoardDetailResponse(
                 board.getId(),
                 board.getUser().getId(),
@@ -248,12 +236,39 @@ public class BoardService {
         );
     }
 
+    // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
+    @Recover
+    public BoardDetailResponse handleOptimisticLockFailure(ObjectOptimisticLockingFailureException e, AuthUser authUser, Long boardId) {
+        log.error("Optimistic locking failed for boardId: {} after maximum retries", boardId);
+        throw new ApiException(ErrorStatus.OPTIMISTIC_LOCK_FAILED);
+    }
+
+    // 데이터베이스의 조회수 증가
+    public void incrementDatabaseViewCount(Board board) {
+        board.setViewCount(); // 조회수 증가
+        boardRepository.save(board); // 업데이트 반영
+    }
+
+    // 트랜잭션 커밋 후 이벤트 발행
+    public void publishViewCountEvent(AuthUser authUser, Long boardId) {
+        applicationEventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
+    }
+
+    // 트랜잭션 커밋 후에 Redis 조회수 증가 이벤트 처리
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleViewCountIncrement(BoardDetailEvent event) {
+        String redisViewKey = "board:viewcount:" + event.getBoardId();
+        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);
+        updateRanking(event.getBoardId(), viewCount);
+    }
+
     // 랭킹 업데이트
     private void updateRanking(Long boardId, Long viewCount) {
         String rankingKey = "board:ranking";
         redisTemplate.opsForZSet().add(rankingKey, boardId, viewCount);
     }
 
+    // 어뷰징 방지를 위한 조회수 증가
     private void incrementViewCount(String redisKey, String userId) {
         String userKey = redisKey + ":user:" + userId;
 
@@ -303,10 +318,12 @@ public class BoardService {
                 .collect(Collectors.toList());
         return topBoards;
     }
+
+    // 스케줄러 aop 만들어서 하는 법을 써도 된다.
     // 매 시간마다 캐시 리셋
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
-    public void resetDailyViewCount2() {
+    public void resetDailyViewCount() {
         String pattern = "board:viewcount:*";
         Set<String> keys = redisTemplate.keys(pattern);
         if (keys != null && !keys.isEmpty()) {

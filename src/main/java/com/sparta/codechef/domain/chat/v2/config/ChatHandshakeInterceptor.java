@@ -4,7 +4,6 @@ import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.security.AuthUser;
 import com.sparta.codechef.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
