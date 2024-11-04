@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.attachment.annotation;
+package com.sparta.codechef.common.annotation;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 

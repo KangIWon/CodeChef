@@ -1,7 +1,7 @@
 package com.sparta.codechef.domain.board.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.attachment.annotation.AuthForBoard;
+import com.sparta.codechef.common.annotation.AuthForBoard;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
@@ -11,7 +11,6 @@ import com.sparta.codechef.domain.board.service.BoardService;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
