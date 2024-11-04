@@ -44,4 +44,13 @@ public class BoardDocument {
     private Language language;
 
 
+    public void update(String title, String contents, Framework framework, Language language)
+    {
+        this.title = title;
+        this.contents = contents;
+        this.framework = framework;
+        this.language = language;
+    }
+
+
 }

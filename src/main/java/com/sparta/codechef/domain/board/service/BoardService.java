@@ -132,6 +132,15 @@ public class BoardService {
                 request.getFramework()
         );
 
+        BoardDocument boardDocument = boardDocumentRepository.findByBoardId(board.getId());
+        boardDocument.update(
+                board.getTitle(),
+                board.getContents(),
+                board.getFramework(),
+                board.getLanguage()
+        );
+        boardDocumentRepository.save(boardDocument);
+
         return null;
     }
 
@@ -148,7 +157,7 @@ public class BoardService {
         );
 
         boardRepository.deleteById(boardId);
-
+        boardDocumentRepository.deleteByBoardId(boardId);
         return null;
     }
 

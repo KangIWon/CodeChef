@@ -9,5 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 @Repository
 public interface BoardDocumentRepository extends ElasticsearchRepository<BoardDocument, String> {
-    BoardDocument findByTitle(String title);
+
+    void deleteByBoardId(Long boardId);
+    BoardDocument findByBoardId(Long boardId);
 }
