@@ -25,7 +25,7 @@ public class BoardDocument {
     @Id
     private String id = UUID.randomUUID().toString();
 
-    @Field(type = FieldType.Long, index = false, docValues = false)
+    @Field(type = FieldType.Long, index = true, docValues = false)
     private Long boardId;
 
     @Field(type = FieldType.Text, analyzer = "nori")

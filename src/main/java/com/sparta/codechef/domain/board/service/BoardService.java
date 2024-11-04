@@ -156,8 +156,14 @@ public class BoardService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        boardRepository.deleteById(boardId);
-        boardDocumentRepository.deleteByBoardId(boardId);
+        BoardDocument document = boardDocumentRepository.findByBoardId(boardId);
+        if (document != null) {
+            // 문서가 존재하면 삭제
+            boardDocumentRepository.delete(document);
+            System.out.println("BoardDocument with boardId " + boardId + " has been deleted.");
+        } else {
+            System.out.println("No document found with boardId " + boardId);
+        }
         return null;
     }
 
@@ -203,10 +209,6 @@ public class BoardService {
                 board.getContents(),
                 board.getLanguage().toString(),
                 board.getFramework()));
-    }
-    public void syncBoardToElasticsearch() {
-        List<Board> boards = boardRepository.findAll();
-
     }
 
     /**
