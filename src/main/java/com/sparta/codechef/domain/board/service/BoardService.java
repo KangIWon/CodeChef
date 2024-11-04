@@ -192,16 +192,6 @@ public class BoardService {
     )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-//        ObjectOptimisticLockingFailureException e = null;
-//        int attempt = retryCounter.incrementAndGet();
-//        log.warn("Optimistic locking failed. Retry attempt: {}", attempt);
-        // 재시도가 모두 실패한 경우 처리
-//        if (attempt > 3) {
-//            log.info("실패함");
-//            retryCounter.set(0);
-////            return handleOptimisticLockFailure(e, authUser, boardId);
-//        }
-
         log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
         Board board = boardRepository.findById(boardId)
@@ -210,15 +200,18 @@ public class BoardService {
         List<Comment> commentList = commentRepository.findByBoardId(boardId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
 
-        // 데이터베이스에서 조회수 증가 처리
-        incrementDatabaseViewCount(board);
+        // 어뷰징 방지: 1시간 내에 중복 조회 확인
+        if (canIncrementViewCount(authUser.getUserId().toString(), boardId)) {
+            // 데이터베이스 조회수 증가
+            incrementDatabaseViewCount(board);
 
-        // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
-        publishViewCountEvent(authUser, boardId);
+            // 이벤트 발행 (트랜잭션 커밋 후에 Redis 조회수 증가)
+            publishViewCountEvent(authUser, boardId);
+        } else {
+            log.info("User {} already viewed boardId {} within the last hour. Skipping increment.", authUser.getUserId(), boardId);
+        }
 
-//        log.info("성공임");
         log.info("Successfully retrieved board details for boardId: {}", boardId);
-        // 조회수 증가가 반영된 보드 정보를 반환
         return new BoardDetailResponse(
                 board.getId(),
                 board.getUser().getId(),
@@ -236,48 +229,54 @@ public class BoardService {
         );
     }
 
-    // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
-    @Recover
-    public BoardDetailResponse handleOptimisticLockFailure(ObjectOptimisticLockingFailureException e, AuthUser authUser, Long boardId) {
-        log.error("Optimistic locking failed for boardId: {} after maximum retries", boardId);
-        throw new ApiException(ErrorStatus.OPTIMISTIC_LOCK_FAILED);
+    // 어뷰징 체크 메서드
+    private boolean canIncrementViewCount(String userId, Long boardId) {
+        String userKey = "board:viewcount:" + boardId + ":user:" + userId;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(userKey))) {
+            return false; // 조회가 이미 기록된 경우
+        }
+        redisTemplate.opsForValue().set(userKey, "1", Duration.ofHours(1)); // 1시간 동안 조회 기록 유지
+        return true;
     }
 
-    // 데이터베이스의 조회수 증가
+    // 조회수 증가 이벤트 발행
+    public void publishViewCountEvent(AuthUser authUser, Long boardId) {
+        applicationEventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
+    }
+
+    // 트랜잭션 커밋 후 Redis 조회수 증가 이벤트 처리
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleViewCountIncrement(BoardDetailEvent event) {
+        String redisViewKey = "board:viewcount:" + event.getBoardId();
+
+        // Redis에 초기 조회수 설정 후 증가
+        Long viewCount = redisTemplate.opsForValue().get(redisViewKey) != null
+                ? redisTemplate.opsForValue().increment(redisViewKey)
+                : redisTemplate.opsForValue().increment(redisViewKey, 0);
+        log.info("Incremented Redis view count for boardId {}: {}", event.getBoardId(), viewCount);
+
+        // 랭킹 업데이트
+        updateRanking(event.getBoardId(), viewCount);
+    }
+
+    // 데이터베이스 조회수 증가
+    @Transactional
     public void incrementDatabaseViewCount(Board board) {
         board.setViewCount(); // 조회수 증가
         boardRepository.save(board); // 업데이트 반영
     }
 
-    // 트랜잭션 커밋 후 이벤트 발행
-    public void publishViewCountEvent(AuthUser authUser, Long boardId) {
-        applicationEventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
-    }
-
-    // 트랜잭션 커밋 후에 Redis 조회수 증가 이벤트 처리
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleViewCountIncrement(BoardDetailEvent event) {
-        String redisViewKey = "board:viewcount:" + event.getBoardId();
-        Long viewCount = redisTemplate.opsForValue().increment(redisViewKey, 1);
-        updateRanking(event.getBoardId(), viewCount);
-    }
-
-    // 랭킹 업데이트
+    // 랭킹 업데이트 메서드
     private void updateRanking(Long boardId, Long viewCount) {
         String rankingKey = "board:ranking";
         redisTemplate.opsForZSet().add(rankingKey, boardId, viewCount);
     }
 
-    // 어뷰징 방지를 위한 조회수 증가
-    private void incrementViewCount(String redisKey, String userId) {
-        String userKey = redisKey + ":user:" + userId;
-
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(userKey))) {
-            return; // 이미 조회한 사용자
-        }
-
-        redisTemplate.opsForValue().increment(redisKey);
-        redisTemplate.opsForValue().set(userKey, "1", Duration.ofHours(24));
+    // 재시도가 모두 실패한 경우 호출되는 @Recover 메서드
+    @Recover
+    public BoardDetailResponse handleOptimisticLockFailure(ObjectOptimisticLockingFailureException e, AuthUser authUser, Long boardId) {
+        log.error("Optimistic locking failed for boardId: {} after maximum retries", boardId);
+        throw new ApiException(ErrorStatus.OPTIMISTIC_LOCK_FAILED);
     }
 
     // 인기 보드 랭킹 관리
