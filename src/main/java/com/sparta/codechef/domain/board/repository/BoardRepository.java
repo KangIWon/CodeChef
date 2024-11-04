@@ -18,8 +18,8 @@ public interface BoardRepository extends JpaRepository<Board, Long>, BoardQueryD
     Optional<Page<Board>> findAllByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("SELECT c FROM Board c " +
-            "WHERE (:title IS NULL OR c.title LIKE %:title%) " +
-            "AND (:content IS NULL OR c.contents LIKE %:content%)")
+            "WHERE (:title IS NULL OR c.title LIKE CONCAT(:title, '%')) " +
+            "AND (:content IS NULL OR c.contents LIKE CONCAT(:content, '%'))")
     Page<Board> boardSearch(@Param("title") String title,
                             @Param("content") String content,
                             Pageable pageable);

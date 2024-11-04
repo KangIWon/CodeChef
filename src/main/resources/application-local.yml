@@ -20,6 +20,14 @@ spring:
         format_sql: true
         show_sql: true
         use_sql_comments: true
+  elasticsearch:
+    username: ${ELASTIC_USERNAME}
+    password: ${ELASTIC_PASSWORD}
+    uris: ${ELASTIC_IP_PORT}
+management:
+  health:
+    elasticsearch:
+      enabled: false
 
   kafka:
     bootstrap-servers: localhost:9092  # Kafka 서버 주소
@@ -34,7 +42,6 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       bootstrap-servers: localhost:9093
-
 
 jwt:
   secret:

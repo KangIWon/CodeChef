@@ -12,6 +12,8 @@ import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.domain.comment.dto.CommentResponse;
 import com.sparta.codechef.domain.comment.entity.Comment;
 import com.sparta.codechef.domain.comment.repository.CommentRepository;
+import com.sparta.codechef.domain.elastic.document.BoardDocument;
+import com.sparta.codechef.domain.elastic.repository.BoardDocumentRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
@@ -39,9 +41,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,6 +56,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final CommentRepository commentRepository;
+    private final BoardDocumentRepository boardDocumentRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 //    private final AtomicInteger retryCounter = new AtomicInteger(0);
 
@@ -77,6 +81,17 @@ public class BoardService {
                 .build();
 
         boardRepository.save(board);
+
+        BoardDocument boardDocument = BoardDocument.builder()
+                .boardId(board.getId())
+                .title(board.getTitle())
+                .contents(board.getContents())
+                .language(board.getLanguage())
+                .framework(board.getFramework())
+                .viewCount(0L)
+                .build();
+        // Elasticsearch에 인덱싱 (saveAll 사용)
+        boardDocumentRepository.save(boardDocument);
 
         return null;
     }
@@ -117,8 +132,18 @@ public class BoardService {
                 request.getFramework()
         );
 
+        BoardDocument boardDocument = boardDocumentRepository.findByBoardId(board.getId());
+        boardDocument.update(
+                board.getTitle(),
+                board.getContents(),
+                board.getFramework(),
+                board.getLanguage()
+        );
+        boardDocumentRepository.save(boardDocument);
+
         return null;
     }
+
 
     /**
      * 게시물 삭제
@@ -131,8 +156,14 @@ public class BoardService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        boardRepository.deleteById(boardId);
-
+        BoardDocument document = boardDocumentRepository.findByBoardId(boardId);
+        if (document != null) {
+            // 문서가 존재하면 삭제
+            boardDocumentRepository.delete(document);
+            System.out.println("BoardDocument with boardId " + boardId + " has been deleted.");
+        } else {
+            System.out.println("No document found with boardId " + boardId);
+        }
         return null;
     }
 

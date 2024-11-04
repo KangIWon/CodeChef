@@ -165,6 +165,31 @@ services:
       redis-network:
         ipv4_address: 172.21.0.9
 
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - ELASTIC_PASSWORD=elastic
+      - xpack.security.enabled=true
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.10
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    command: >
+      /bin/sh -c "if [ ! -d plugins/analysis-nori ]; then bin/elasticsearch-plugin install analysis-nori; fi; bin/elasticsearch"
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper
@@ -198,7 +223,6 @@ services:
       KAFKA_NUM_PARTITIONS: 3
     networks:
       - kafka-network
-
 networks:
   redis-network:
     driver: bridge
@@ -207,3 +231,7 @@ networks:
         - subnet: 172.21.0.0/16
   kafka-network:
     driver: bridge
+
+volumes:
+  esdata:
+    driver: local
