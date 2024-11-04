@@ -34,6 +34,8 @@ public class BoardDocument {
     @Field(type = FieldType.Text, analyzer = "nori")
     private String contents;
 
+    @Field(type = FieldType.Long)
+    private Long viewCount;
 
     @Field(type = FieldType.Keyword)
     private Framework framework;

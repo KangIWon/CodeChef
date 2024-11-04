@@ -28,9 +28,28 @@ management:
   health:
     elasticsearch:
       enabled: false
+
+  kafka:
+    bootstrap-servers: localhost:9092  # Kafka 서버 주소
+    consumer:
+      group-id: unique-chat-group-${random.uuid}  # 개별 사용자 단위로 설정하기 위해 유니크한 그룹 ID를 할당
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      bootstrap-servers: localhost:9093
+
 jwt:
   secret:
     key: ${JWT_SECRET_KEY}
+
+web-socket:
+  secret:
+    key: ${WEB_SOCKET_SECRET_KEY}
 
 s3:
   credentials:

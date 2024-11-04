@@ -4,14 +4,9 @@ import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Language;
 import com.sparta.codechef.common.enums.LanguageConverter;
-import com.sparta.codechef.domain.comment.entity.Comment;
 import com.sparta.codechef.domain.user.entity.User;
 import jakarta.persistence.*;
-
 import lombok.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Entity
@@ -43,7 +38,18 @@ public class Board extends Timestamped {
     @Column(name = "framework", nullable = false)
     private Framework framework;
 
+    @Column(nullable = false)
+    private Long viewCount = 0L;
 
+    @Version // 낙관적 락 적용을 위한 버전 필드
+    private Long version;
+
+    public void setViewCount() {
+        if (viewCount == null) {
+            viewCount = 0L;
+        }
+        viewCount++;
+    }
 
     public void BoardModify(String title,
                             String contents,

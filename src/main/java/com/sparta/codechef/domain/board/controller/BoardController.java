@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.board.controller;
 import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.domain.attachment.annotation.AuthForBoard;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
+import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
 import com.sparta.codechef.domain.board.dto.response.BoardDetailResponse;
 import com.sparta.codechef.domain.board.dto.response.BoardResponse;
@@ -10,10 +11,12 @@ import com.sparta.codechef.domain.board.service.BoardService;
 
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class BoardController {
 
     private final BoardService boardService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 게시물 작성
@@ -28,10 +32,10 @@ public class BoardController {
      * @param request : 게시판 생성에 필요한 request
      * */
     @PostMapping// 게시판 생성
-    public ApiResponse createBoard(@RequestBody BoardCreatedRequest request,
+    public ApiResponse<Void> createBoard(@RequestBody BoardCreatedRequest request,
                                    @AuthenticationPrincipal AuthUser authUser) {
 
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", boardService.createBoard(request, authUser));
+        return ApiResponse.ok("게시글 작성되었습니다.", boardService.createBoard(request, authUser));
     }
 
     /**
@@ -43,15 +47,6 @@ public class BoardController {
     public ApiResponse<Page<BoardResponse>> findAllBoard(@RequestParam(defaultValue = "1") int page,
                                                          @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok("게시물 전체 조회 성공", boardService.findAllBoard(page, size));
-    }
-
-    /**
-     * 게시물 단건 조회
-     * @param boardId : 보려고 하는 게시물 번호
-     * */
-    @GetMapping("/{boardId}") // 게시판 단건 조회
-    public ApiResponse<BoardDetailResponse> getBoard(@PathVariable Long boardId) {
-        return ApiResponse.ok(boardId +"번 게시물 조회", boardService.getBoard(boardId));
     }
 
     /**
@@ -93,7 +88,6 @@ public class BoardController {
         return ApiResponse.ok(boardId +"번 게시물 삭제", boardService.deletedBoard(boardId, authUser));
     }
 
-
     /**
      * 게시물 검색
      * @param  title : 제목으로 검색
@@ -108,5 +102,28 @@ public class BoardController {
                                                         @RequestParam(defaultValue = "1") int page,
                                                         @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.ok("검색 기록", boardService.boardSearch(title,content,page,size));
+    }
+
+    /**
+     * 게시물 단건 조회
+     * @param boardId : 보려고 하는 게시물 번호
+     * */
+    // 보드 조회 (조회수 카운팅 포함)
+    @GetMapping("/{boardId}")
+    public ApiResponse<BoardDetailResponse> getBoardDetails(@AuthenticationPrincipal AuthUser authUser,
+                                                            @PathVariable Long boardId) {
+        // 이벤트 발행: 비동기적으로 조회수 증가 처리
+        eventPublisher.publishEvent(new BoardDetailEvent(authUser, boardId));
+
+        // 서비스 메서드를 직접 호출하여 결과 반환
+        BoardDetailResponse boardDetailResponse = boardService.getBoardDetails(authUser, boardId);
+
+        return ApiResponse.ok(boardId + "번 게시물 조회 중입니다.", boardDetailResponse);
+    }
+
+    // 실시간 인기 보드 랭킹 조회
+    @GetMapping("/top")
+    public ApiResponse<List<BoardResponse>> getTopBoards() {
+        return ApiResponse.ok( "실시간으로 가장 인기 있는 보드를 조회했습니다.", boardService.getTopBoards());
     }
 }
