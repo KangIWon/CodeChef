@@ -144,6 +144,6 @@ public class JwtUtil {
     }
 
     public Claims extractClaims(String token) {
-        return getJwtParser().parseClaimsJws(token).getBody();
+            return getJwtParser().parseClaimsJws(token).getBody();
     }
 }

@@ -167,6 +167,7 @@ services:
 
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: es01
     environment:
       - node.name=es01
       - cluster.name=es-docker-cluster
@@ -187,6 +188,8 @@ services:
         hard: -1
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    command: >
+      /bin/sh -c "if [ ! -d plugins/analysis-nori ]; then bin/elasticsearch-plugin install analysis-nori; fi; bin/elasticsearch"
 volumes:
   esdata:
     driver: local

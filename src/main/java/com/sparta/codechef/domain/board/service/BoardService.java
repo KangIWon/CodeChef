@@ -12,6 +12,8 @@ import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.domain.comment.dto.CommentResponse;
 import com.sparta.codechef.domain.comment.entity.Comment;
 import com.sparta.codechef.domain.comment.repository.CommentRepository;
+import com.sparta.codechef.domain.elastic.document.BoardDocument;
+import com.sparta.codechef.domain.elastic.repository.BoardDocumentRepository;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.security.AuthUser;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +37,7 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final BoardDocumentRepository boardDocumentRepository;
     /**
      * 게시물 작성
      * @param authUser : 로그인 유저 정보
@@ -54,6 +58,16 @@ public class BoardService {
                 .build();
 
         boardRepository.save(board);
+
+        BoardDocument boardDocument = BoardDocument.builder()
+                .boardId(board.getId())
+                .title(board.getTitle())
+                .contents(board.getContents())
+                .language(board.getLanguage())
+                .framework(board.getFramework())
+                .build();
+        // Elasticsearch에 인덱싱 (saveAll 사용)
+        boardDocumentRepository.save(boardDocument);
 
         return null;
     }
@@ -188,5 +202,9 @@ public class BoardService {
                 board.getContents(),
                 board.getLanguage().toString(),
                 board.getFramework()));
+    }
+    public void syncBoardToElasticsearch() {
+        List<Board> boards = boardRepository.findAll();
+
     }
 }
