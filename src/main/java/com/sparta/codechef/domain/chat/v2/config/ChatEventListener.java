@@ -4,7 +4,6 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.service.WSChatService;
-import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

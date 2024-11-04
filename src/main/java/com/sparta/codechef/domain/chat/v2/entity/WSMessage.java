@@ -1,10 +1,8 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
 import com.sparta.codechef.domain.chat.v2.dto.response.ChatUserResponse;
-import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.redis.core.RedisHash;
 
 import java.io.Serializable;

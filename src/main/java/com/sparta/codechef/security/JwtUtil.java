@@ -4,7 +4,6 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.TokenType;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
-import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -12,10 +11,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import javax.crypto.SecretKey;
 import java.net.URLEncoder;
@@ -139,7 +136,7 @@ public class JwtUtil {
                 .setExpiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
-                .claim("userRole", role)
+                .claim("userRole", role.getUserRole())
                 .setIssuedAt(now)
                 .signWith(key)
                 .compact();

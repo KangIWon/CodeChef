@@ -1,7 +1,6 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonValue;
 import com.sparta.codechef.common.enums.UserRole;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
