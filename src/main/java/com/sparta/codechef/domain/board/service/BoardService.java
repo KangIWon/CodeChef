@@ -27,6 +27,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,12 +40,12 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@EnableRetry
 @Transactional(readOnly = true)
 public class BoardService {
 
@@ -53,7 +54,7 @@ public class BoardService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final CommentRepository commentRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final AtomicInteger retryCounter = new AtomicInteger(0);
+//    private final AtomicInteger retryCounter = new AtomicInteger(0);
 
     /**
      * 게시물 작성
@@ -191,15 +192,15 @@ public class BoardService {
     )
     @Transactional
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
-        ObjectOptimisticLockingFailureException e = null;
-        int attempt = retryCounter.incrementAndGet();
-        log.warn("Optimistic locking failed. Retry attempt: {}", attempt);
+//        ObjectOptimisticLockingFailureException e = null;
+//        int attempt = retryCounter.incrementAndGet();
+//        log.warn("Optimistic locking failed. Retry attempt: {}", attempt);
         // 재시도가 모두 실패한 경우 처리
-        if (attempt > 3) {
-            log.info("실패함");
-            retryCounter.set(0);
-            return handleOptimisticLockFailure(e, authUser, boardId);
-        }
+//        if (attempt > 3) {
+//            log.info("실패함");
+//            retryCounter.set(0);
+////            return handleOptimisticLockFailure(e, authUser, boardId);
+//        }
 
         log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
@@ -215,7 +216,7 @@ public class BoardService {
         // 트랜잭션이 성공적으로 커밋된 후에만 Redis에 조회수 반영
         publishViewCountEvent(authUser, boardId);
 
-        log.info("성공임");
+//        log.info("성공임");
         log.info("Successfully retrieved board details for boardId: {}", boardId);
         // 조회수 증가가 반영된 보드 정보를 반환
         return new BoardDetailResponse(

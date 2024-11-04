@@ -13,7 +13,6 @@ import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,10 +32,10 @@ public class BoardController {
      * @param request : 게시판 생성에 필요한 request
      * */
     @PostMapping// 게시판 생성
-    public ApiResponse createBoard(@RequestBody BoardCreatedRequest request,
+    public ApiResponse<Void> createBoard(@RequestBody BoardCreatedRequest request,
                                    @AuthenticationPrincipal AuthUser authUser) {
 
-        return ApiResponse.createSuccess(HttpStatus.OK.value(), "게시글 작성되었습니다.", boardService.createBoard(request, authUser));
+        return ApiResponse.ok("게시글 작성되었습니다.", boardService.createBoard(request, authUser));
     }
 
     /**

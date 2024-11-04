@@ -1,6 +1,5 @@
 package com.sparta.codechef.common;
 
-import com.sparta.codechef.domain.chat.entity.Message;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
