@@ -39,10 +39,11 @@ public class SearchService {
 
     // 제목 + 내용으로 검색
     public Page<BoardDocument> searchByTitleAndContents(String keyword, Pageable pageable) throws IOException {
-        Query query = Query.of(q -> q.bool(b -> b
-                .should(sh -> sh.match(m -> m.field("title").query(keyword)))
-                .should(sh -> sh.match(m -> m.field("contents").query(keyword)))
-        ));
+        Query query = Query.of(q -> q
+                .multiMatch(mm -> mm
+                        .fields("title", "contents")
+                        .query(keyword)
+                ));
         return executeSearch(query, pageable);
     }
 

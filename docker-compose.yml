@@ -223,7 +223,6 @@ services:
       KAFKA_NUM_PARTITIONS: 3
     networks:
       - kafka-network
-      -
 networks:
   redis-network:
     driver: bridge
