@@ -39,11 +39,12 @@ public enum ErrorStatus implements BaseCode {
 
     // 첨부파일 관련 예외
     NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "중복된 이름의 첨부파일이 존재합니다."),
+    ATTACHMENT_NAME_IS_NULL(HttpStatus.BAD_REQUEST, 400, "첨부파일 이름이 NULL이 될 수 없습니다."),
+    EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가된 첨부파일이 존재하지 않습니다."),
     MAX_UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "단일 첨부파일은 최대 5MB까지 업로드 가능합니다."),
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
     FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
     FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
-    EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가할 첨부파일 목록이 없습니다."),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
@@ -82,6 +83,8 @@ public enum ErrorStatus implements BaseCode {
     NOT_FOUND_CHAT_USER(HttpStatus.NOT_FOUND, 404, "채팅에 접속되어 있지 않습니다."),
     NO_USER_IN_CHATROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방에 유저가 없습니다."),
     UNAUTHORIZED_CHAT_USER(HttpStatus.UNAUTHORIZED, 401, "채팅방 접속 인증 유저 정보를 찾을 수 없습니다."),
+    INVALID_CHAT_USER_ROLE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 채팅 유저 권한입니다."),
+    INVALID_MESSAGE_TYPE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 분류입니다."),
 
     // 메세지 관련 예외
     FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),

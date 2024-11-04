@@ -23,6 +23,7 @@ public class WSChatUser implements Serializable {
     @NotNull
     private String email;
     private Long roomId;
+    @NotNull
     private String role;
 
     public void updateChatRoom(Long roomId) {

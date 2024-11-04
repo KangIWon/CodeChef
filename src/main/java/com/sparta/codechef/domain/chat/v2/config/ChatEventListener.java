@@ -12,6 +12,8 @@ import org.springframework.messaging.simp.SimpAttributes;
 import org.springframework.messaging.simp.SimpAttributesContextHolder;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -20,9 +22,10 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ChatEventListener {
+public class ChatEventListener extends TextWebSocketHandler {
 
     private final WSChatService wsChatService;
+
 
     // 웹 소켓 연결 요청 처리
     @EventListener
@@ -62,7 +65,6 @@ public class ChatEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
-
 
         SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
         WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");

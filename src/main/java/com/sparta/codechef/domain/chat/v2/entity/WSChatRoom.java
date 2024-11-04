@@ -39,10 +39,4 @@ public class WSChatRoom implements Serializable {
             this.maxParticipants = maxParticipants;
         }
     }
-
-    public void updateHost(Long hostId) {
-        this.hostId = hostId;
-    }
-    public void subscribeChatRoom() { this.curParticipants++; }
-    public void unsubscribeChatRoom() { this.curParticipants--; }
 }

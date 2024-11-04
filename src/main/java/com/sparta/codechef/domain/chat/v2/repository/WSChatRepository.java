@@ -3,6 +3,7 @@ package com.sparta.codechef.domain.chat.v2.repository;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
+import com.sparta.codechef.domain.chat.v2.dto.UnsubscribeDTO;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUserRole;
@@ -14,7 +15,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -77,32 +77,26 @@ public class WSChatRepository {
      * @param roomId : 채팅방 ID
      * @param userId : 유저 ID
      */
-    public void unsubscribeChatRoom(Long roomId, Long userId) {
+    public UnsubscribeDTO unsubscribeChatRoom(Long roomId, Long userId) {
         this.redisTemplate.opsForZSet().remove(SUBSCRIBE_CHAT_ROOM_KEY, userId);
         this.redisTemplate.opsForHash().delete(CHAT_USER_KEY + userId, "roomId");
-        Long total = this.redisTemplate.opsForHash().increment(CHAT_ROOM_KEY + roomId, "curParticipants",-1);
+        this.redisTemplate.opsForHash().increment(CHAT_ROOM_KEY + roomId, "curParticipants",-1);
 
-        if (total == 0) {
-            this.redisTemplate.delete(CHAT_ROOM_KEY + roomId);
+        boolean isHost = this.isHost(userId);
+        Long hostId = userId;
+        if (isHost) {
+            hostId = this.successChatRoomHost(roomId, userId);
         }
 
-        if (this.isHost(userId)) {
-            this.successChatRoomHost(roomId, userId);
-        }
+        return new UnsubscribeDTO(isHost, hostId);
     }
 
     /**
      * 채팅방 방장 승계할 유저 ID getter
      * @param roomId : 채팅방 ID
      */
-    public void successChatRoomHost(Long roomId, Long userId) {
-        Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().range(SUBSCRIBE_CHAT_ROOM_KEY, roomId, roomId);
-
-        if (userIdSet == null || userIdSet.isEmpty()) {
-            return;
-        }
-
-        Long nextHostId = Long.parseLong(userIdSet.stream().toList().get(0));
+    public Long successChatRoomHost(Long roomId, Long userId) {
+        Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().rangeByScore(SUBSCRIBE_CHAT_ROOM_KEY, roomId, roomId);
 
         WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
@@ -111,6 +105,12 @@ public class WSChatRepository {
         chatUser.updateRole(WSChatUserRole.ROLE_USER);
         this.chatUserRepository.save(chatUser);
 
+        if (userIdSet == null || userIdSet.isEmpty()) {
+            this.redisTemplate.delete(CHAT_ROOM_KEY + roomId);
+            return null;
+        }
+
+        Long nextHostId = Long.parseLong(userIdSet.stream().toList().get(0));
         WSChatUser nextHost = this.chatUserRepository.findById(nextHostId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
@@ -119,6 +119,8 @@ public class WSChatRepository {
         this.chatUserRepository.save(nextHost);
 
         this.redisTemplate.opsForHash().put(CHAT_ROOM_KEY + roomId, "hostId", nextHostId);
+
+        return nextHostId;
     }
 
 
@@ -129,8 +131,7 @@ public class WSChatRepository {
 
     // 현재 채팅방에 접속해 있는 유저인지 확인
     public boolean isInChatRoom(Long userId) {
-        Long roomId = (Long) this.redisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "chatRoomId");
-        return roomId != null;
+        return this.stringRedisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "chatRoomId") != null;
     }
 
 
@@ -149,13 +150,12 @@ public class WSChatRepository {
         int start = (page - 1) * size;
         int end = start + size;
 
-
         List<WSChatRoom> chatRoomList = new ArrayList<>();
         this.chatRoomRepository.findAll().forEach(chatRoomList::add);
 
         long totalChatRoom = chatRoomList.size();
 
-        if (totalChatRoom < start || totalChatRoom == 0) {
+        if (totalChatRoom <= start || totalChatRoom == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
 
@@ -169,7 +169,7 @@ public class WSChatRepository {
                         chatRoom.getCurParticipants(),
                         chatRoom.getMaxParticipants()
                 ))
-                .sorted((o1, o2) -> (int) (o1.getId() - o2.getId()))
+                .sorted((o1, o2) -> (int) (o1.getId() - o2.getId()))  // 채팅방 ID로 오름차순 정렬
                 .toList();
 
         return new PageImpl<>(responseList, pageable, totalChatRoom);
@@ -185,9 +185,9 @@ public class WSChatRepository {
         List<WSMessage> messageList = new ArrayList<>();
 
         try {
-            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
+            List<Long> messageIdList = Objects.requireNonNull(this.stringRedisTemplate.opsForZSet().rangeByScore(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
                     .stream()
-                    .map(o -> Long.parseLong(String.valueOf(o)))
+                    .map(Long::parseLong)
                     .toList();
             this.messageRepository.findAllById(messageIdList).forEach(messageList::add);
 
@@ -217,15 +217,15 @@ public class WSChatRepository {
 
         List<WSMessage> messageList = new ArrayList<>();
         try {
-            List<Long> messageIdList = Objects.requireNonNull(this.redisTemplate.opsForZSet().range(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
+            List<Long> messageIdList = Objects.requireNonNull(this.stringRedisTemplate.opsForZSet().rangeByScore(CHAT_ROOM_MESSAGE_KEY, roomId, roomId))
                     .stream()
-                    .map(o -> Long.parseLong(String.valueOf(o)))
+                    .map(Long::parseLong)
                     .toList();
             this.messageRepository.findAllById(messageIdList).forEach(messageList::add);
             long totalMessage = messageList.size();
 
             if (totalMessage < start || totalMessage == 0) {
-                return new PageImpl<>(List.of(), pageable, 0);
+                return new PageImpl<>(new ArrayList<>(List.of()), pageable, 0);
             }
 
             messageList = messageList.stream().filter(Objects::nonNull)
@@ -239,7 +239,7 @@ public class WSChatRepository {
             return new PageImpl<>(messageList, pageable, totalMessage);
 
         } catch (NullPointerException e) {
-            return null;
+            return new PageImpl<>(new ArrayList<>(List.of()), pageable, 0);
         }
     }
 
@@ -248,5 +248,26 @@ public class WSChatRepository {
         this.messageRepository.save(wsMessage);
     }
 
+
+    /**
+     * 채팅방 개설 유저인지 확인 메서드
+     * @param roomId : 채팅방 ID
+     * @param userId : 방장인지 확인할 유저 ID
+     * @return
+     */
+    public boolean existChatRoomByIdAndHostId(Long roomId, Long userId) {
+        String hostId = (String) this.stringRedisTemplate.opsForHash().get(CHAT_ROOM_KEY + roomId, "hostId");
+        boolean existChatRoom =  hostId != null && hostId.equals(String.valueOf(userId));
+        return existChatRoom;
+    }
+
+    /**
+     * 채팅 유저 id로 email getter
+     * @param userId : 채팅 유저 ID
+     * @return 채팅 유저 Email
+     */
+    public String findEmailById(Long userId) {
+        return (String) this.stringRedisTemplate.opsForHash().get(CHAT_USER_KEY + userId, "email");
+    }
 }
 

@@ -7,6 +7,7 @@ import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+import com.sparta.codechef.domain.chat.v2.dto.UnsubscribeDTO;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatRoom;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUserRole;
@@ -143,7 +144,7 @@ public class WSChatService {
      * @param roomId : 채팅방 id
      * @param userId : 유저 id
      */
-    public void unsubscribeChatRoom(Long roomId, Long userId) {
+    public UnsubscribeDTO unsubscribeChatRoom(Long roomId, Long userId) {
         WSChatUser chatUser = this.chatUserRepository.findById(userId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER)
         );
@@ -152,7 +153,7 @@ public class WSChatService {
             throw new ApiException(ErrorStatus.NOT_IN_CHATROOM);
         }
 
-        this.chatRepository.unsubscribeChatRoom(roomId, userId);
+        return this.chatRepository.unsubscribeChatRoom(roomId, userId);
     }
 
 

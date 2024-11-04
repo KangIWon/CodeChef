@@ -21,8 +21,8 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) {
         String token = this.extractTokenFromRequest(request);
 
-        if (token != null && jwtUtil.validateToken(token)) {
-            AuthUser authUser = jwtUtil.getAuthUserFromToken(token);
+        if (token != null) {
+            AuthUser authUser = jwtUtil.validateToken(token);
 
             attributes.put("chatUser", WSChatUser.fromAuthUser(authUser));  // WebSocket 세션에 사용자 정보 저장
             return true;
