@@ -94,6 +94,7 @@ public class WSChatRepository {
     /**
      * 채팅방 방장 승계할 유저 ID getter
      * @param roomId : 채팅방 ID
+     * @param userId : 퇴장하는 유저 ID
      */
     public Long successChatRoomHost(Long roomId, Long userId) {
         Set<String> userIdSet = this.stringRedisTemplate.opsForZSet().rangeByScore(SUBSCRIBE_CHAT_ROOM_KEY, roomId, roomId);

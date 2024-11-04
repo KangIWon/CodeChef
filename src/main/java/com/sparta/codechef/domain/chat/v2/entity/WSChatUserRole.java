@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
@@ -31,6 +32,11 @@ public enum WSChatUserRole {
                 .filter(userRole -> userRole.name().equalsIgnoreCase(role.name()))
                 .findFirst()
                 .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CHAT_USER_ROLE));
+    }
+
+    @JsonValue
+    public String toValue() {
+        return this.name();
     }
 
     public static class Authority {
