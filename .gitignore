@@ -49,3 +49,7 @@ propertyConfig
 *.rdb
 *.aof
 *.manifest
+# elasticsearch cache
+data/elasticsearch/*
+
+
