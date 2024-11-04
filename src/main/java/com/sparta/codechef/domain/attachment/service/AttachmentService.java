@@ -30,6 +30,10 @@ public class AttachmentService {
     @Value("${s3.bucket}")
     private String bucketName;
 
+    @Value("${cloudfront.url}")
+    private String cloudFrontUrl;
+
+
     /**
      * 첨부파일 추가
      * @param boardId : 게시글 ID
@@ -52,7 +56,7 @@ public class AttachmentService {
     /**
      * 게시글에 첨부된 첨부파일 조회
      * @param boardId : 게시글 ID
-     * @return 첨부파일 정보 리스트(파일명, URL)
+     * @return 첨부파일 정보 리스트(파일명, cloudFrontFileURL)
      */
     public List<AttachmentResponse> getFiles(Long boardId) {
         boolean isPresentBoard = this.boardRepository.existsById(boardId);
@@ -62,11 +66,12 @@ public class AttachmentService {
         };
 
         return this.getKeyListFromS3(boardId).stream().map(key -> {
-            String s3Url = amazonS3.getUrl(bucketName, key).toString();
+            // CloudFront URL + / + s3 key
+            String cloudFrontFileUrl = cloudFrontUrl + "/" + key;
 
             return new AttachmentResponse(
                     this.getOriginalFileName(boardId, key),
-                    s3Url
+                    cloudFrontFileUrl
             );
         }).toList();
     }
@@ -79,7 +84,6 @@ public class AttachmentService {
     public void deleteFiles(Long boardId) {
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
     }
-
 
     // S3 요청 메서드
     /**
@@ -103,7 +107,7 @@ public class AttachmentService {
      * 단일 첨부파일 업로드
      * @param boardId : 게시글 ID
      * @param file : 첨부파일
-     * @return 첨부파일 정보(파일명, URL)
+     * @return 첨부파일 정보(파일명, cloudFrontFileURL)
      */
     public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
         String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
@@ -119,9 +123,12 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
         }
 
+        String cloudFrontFileUrl = cloudFrontUrl + "/" + s3Key;
+
+        // 4. CloudFront URL로 AttachmentResponse 생성 및 반환
         return new AttachmentResponse(
                 file.getOriginalFilename(),
-                amazonS3.getUrl(bucketName, s3Key).toString()
+                cloudFrontFileUrl // CloudFront URL을 반환
         );
     }
 
@@ -146,7 +153,7 @@ public class AttachmentService {
      */
     private String getPath(Long boardId) {
         return new StringBuffer()
-                .append("/board")
+                .append("board")
                 .append(boardId)
                 .append("/")
                 .toString();
