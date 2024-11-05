@@ -22,6 +22,7 @@ public class EventService {
 
     private final UserRepository userRepository;
     private final RedissonClient redissonClient;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public Void eventStart(AuthUser authUser) {
         if (!authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
@@ -30,6 +31,11 @@ public class EventService {
         RAtomicLong eventCounter = redissonClient.getAtomicLong("event");
         eventCounter.set(100);
         eventCounter.expire(1, TimeUnit.HOURS);
+
+        // Redis로 알림 메시지 발행
+        String channel = "eventNotifications";
+        String message = "이벤트가 시작되었습니다.";
+        redisTemplate.convertAndSend(channel, message);
         return null;
     }
 
@@ -105,4 +111,3 @@ public class EventService {
 
     }
 }
-
