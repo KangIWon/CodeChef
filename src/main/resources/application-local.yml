@@ -60,3 +60,7 @@ s3:
 
 cloudfront:
   url: ${CLOUD_FRONT_URL}
+
+slack:
+  webhook:
+    url: ${SLACK_WEBHOOK_URL}
