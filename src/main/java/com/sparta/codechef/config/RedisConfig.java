@@ -46,10 +46,24 @@ public class RedisConfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory());
         redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         return redisTemplate;
     }
 
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        config.useSentinelServers()
+                .setMasterName("mymaster")
+                .setCheckSentinelsList(false) // Sentinel 최소 개수 체크 비활성화
+                .addSentinelAddress("redis://" + localhost + ":26379",
+                        "redis://" + localhost + ":26380",
+                        "redis://" + localhost + ":26381");
+
+        return Redisson.create(config);
+    }
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
@@ -68,17 +82,4 @@ public class RedisConfig {
                 .build();
     }
 
-    // Redisson 분산 락을 위한 클라이언트 Bean 설정
-    @Bean
-    public RedissonClient redissonClient() {
-        Config config = new Config();
-        config.useSentinelServers()
-                .setMasterName("mymaster")
-                .setCheckSentinelsList(false) // Sentinel 최소 개수 체크 비활성화
-                .addSentinelAddress("redis://" + localhost + ":26379",
-                        "redis://" + localhost + ":26380",
-                        "redis://" + localhost + ":26381");
-
-        return Redisson.create(config);
-    }
 }

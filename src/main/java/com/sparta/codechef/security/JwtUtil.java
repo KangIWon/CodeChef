@@ -1,19 +1,19 @@
 package com.sparta.codechef.security;
 
+import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.TokenType;
 import com.sparta.codechef.common.enums.UserRole;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.Jwts;
+import com.sparta.codechef.common.exception.ApiException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import javax.crypto.SecretKey;
 import java.net.URLEncoder;
@@ -137,7 +137,7 @@ public class JwtUtil {
                 .setExpiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
-                .claim("userRole", role.getUserRole())
+                .claim("userRole", role)
                 .setIssuedAt(now)
                 .signWith(key)
                 .compact();
@@ -145,5 +145,35 @@ public class JwtUtil {
 
     public Claims extractClaims(String token) {
         return getJwtParser().parseClaimsJws(token).getBody();
+    }
+
+    public AuthUser getAuthUserFromToken(String token) {
+        Claims claims = extractClaims(token);
+
+        return new AuthUser(
+                Long.parseLong(claims.getSubject()),
+                claims.get("email", String.class),
+                UserRole.of(claims.get("userRole", String.class))
+        );
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jws<Claims> claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+
+            return true;
+        } catch (SecurityException | MalformedJwtException e) {
+            log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.", e);
+            throw new ApiException(ErrorStatus.UNAUTHORIZED_INVALID_TOKEN);
+        } catch (ExpiredJwtException e) {
+            log.error("Expired JWT token, 만료된 JWT token 입니다.", e);
+            throw new ApiException(ErrorStatus.UNAUTHORIZED_EXPIRED_TOKEN);
+        } catch (UnsupportedJwtException e) {
+            log.error("Unsupported JWT token, 지원되지 않는 JWT 토큰 입니다.", e);
+            throw new ApiException(ErrorStatus.BAD_REQUEST_UNSUPPORTED_TOKEN);
+        } catch (Exception e) {
+            log.error("Internal server error", e);
+            throw new ApiException(ErrorStatus.FAILED_TO_AUTHORIZE_USER);
+        }
     }
 }

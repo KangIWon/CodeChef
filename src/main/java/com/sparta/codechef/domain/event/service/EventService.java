@@ -31,7 +31,8 @@ public class EventService {
 
     public Void eventStart(AuthUser authUser) {
 
-        if (authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
+
+        if (!authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
 
         Integer eventCoin = 100;
@@ -68,11 +69,11 @@ public class EventService {
 
                     if (event >= 0) {
                         checkAttendance(user, 1000);
-//                        user.isAttended();
+                        user.isAttended();
                         user.updateLastAttendDate();
                     } else {
                         // 이벤트 종료 후, 남은 포인트가 없을 때
-                        eventCounter.set(0); // 값이 음수로 내려가지 않도록 0으로 설정
+                        eventCounter.delete();
                         throw new ApiException(ErrorStatus.EVENT_END);
                     }
                     return null;
@@ -92,12 +93,8 @@ public class EventService {
         redisTemplate.opsForValue().increment(redisKey, points);
         redisTemplate.expire(redisKey, Duration.ofMinutes(10));
 
-        // RAtomicLong으로 누적 점수 업데이트 및 TTL 설정
-        RAtomicLong atomicLong = redissonClient.getAtomicLong(redisKey);
-        atomicLong.addAndGet(points); // 점수 누적
-        atomicLong.expire(10, TimeUnit.MINUTES); // TTL을 직접 설정
-
         // 이벤트에서 받은 포인트를 DB에 저장
+        syncPointsToDatabase();
     }
 
     @Transactional
@@ -109,19 +106,6 @@ public class EventService {
             userRepository.updatePoints(points, id);
             redisTemplate.delete(redisKey);
         });
-        // Redis에서 사용자 점수 조회 및 DB 업데이트
-        RKeys keys = redissonClient.getKeys(); // 모든 키 조회를 위한 RKeys 객체
-        Iterable<String> matchingKeys = keys.getKeysByPattern("user:*:points"); // "user:*:points" 패턴으로 모든 사용자 점수 키 조회
 
-        for (String redisKey : matchingKeys) {
-            String userIdString = redisKey.replaceAll("user:(\\d+):points", "$1");
-            long id = Long.parseLong(userIdString);
-
-            // 점수를 가져오면서 해당 키 삭제
-            int points = (int) redissonClient.getAtomicLong(redisKey).getAndDelete();
-
-            userRepository.updatePoints(points, id); // DB에 점수 업데이트
-        }
     }
-
 }

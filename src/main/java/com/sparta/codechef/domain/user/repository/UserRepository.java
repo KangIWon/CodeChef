@@ -29,9 +29,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Query("SELECT count(u) FROM User u WHERE u.chatRoom.id = :chatRoomId")
     int countAllByChatRoom(Long chatRoomId);
 
-    @Query("SELECT exists(SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId)")
-    boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
-
     @Modifying
     @Query("UPDATE User u SET u.point = GREATEST(CAST(u.point * 0.9 AS integer), 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
     List<User> decreaseAutomatically(LocalDate date,LocalDate today);
@@ -43,7 +40,8 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Modifying
     @Query("UPDATE User u SET u.point = 0")
     void resetUserPoint();
-  
+
+    @Modifying
     @Query("UPDATE User u SET u.point = u.point + :point WHERE u.id = :id")
     void updatePoints(@Param("point") int point, @Param("id") long id);
 

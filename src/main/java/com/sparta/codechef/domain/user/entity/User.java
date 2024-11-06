@@ -3,7 +3,7 @@ package com.sparta.codechef.domain.user.entity;
 import com.sparta.codechef.common.Timestamped;
 import com.sparta.codechef.common.enums.Organization;
 import com.sparta.codechef.common.enums.UserRole;
-import com.sparta.codechef.domain.chat.entity.ChatRoom;
+import com.sparta.codechef.domain.chat.v1.entity.ChatRoom;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.*;

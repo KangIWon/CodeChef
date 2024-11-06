@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface UserQueryDslRepository {
 
     Optional<User> findNextHost(Long userId, Long chatRoomId);
+
+    boolean existsUserByIdAndChatRoomId(Long userId, Long chatRoomId);
 }
