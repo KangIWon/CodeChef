@@ -5,7 +5,6 @@ import com.sparta.codechef.domain.chat.v2.dto.response.ChatUserResponse;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSMessage;
 import com.sparta.codechef.domain.chat.v2.repository.WSChatRepository;
-import com.sparta.codechef.domain.chat.v2.repository.WSMessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +18,6 @@ import static com.sparta.codechef.domain.chat.v2.entity.MessageType.*;
 public class WSMessageService {
 
     private final WSChatRepository chatRepository;
-    private final WSMessageRepository messageRepository;
-
     private static final String MESSAGE_KEY = "message";
 
 
@@ -59,13 +56,14 @@ public class WSMessageService {
      * @return
      */
     public WSMessage sendMessage(WSChatUser chatUser, Long roomId, String content) {
-        Long messageId = this.chatRepository.generateId(MESSAGE_KEY);
-        ChatUserResponse sender = new ChatUserResponse(chatUser);
+        WSMessage message = new WSMessage(
+                this.getMessageId(),
+                roomId,
+                new ChatUserResponse(chatUser),
+                content
+        );
 
-        WSMessage wsMessage = new WSMessage(messageId, roomId, sender, content);
-        this.chatRepository.saveMessage(wsMessage);
-
-        return wsMessage;
+        return this.chatRepository.saveMessage(message);
     }
 
     /**
@@ -91,5 +89,9 @@ public class WSMessageService {
         }
 
         return messageList;
+    }
+
+    private Long getMessageId() {
+        return this.chatRepository.generateId(MESSAGE_KEY);
     }
 }

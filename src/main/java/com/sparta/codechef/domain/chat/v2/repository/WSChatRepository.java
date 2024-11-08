@@ -83,7 +83,7 @@ public class WSChatRepository {
         this.redisTemplate.opsForHash().increment(CHAT_ROOM_KEY + roomId, "curParticipants",-1);
 
         boolean isHost = this.isHost(userId);
-        Long hostId = userId;
+        Long hostId = null;
         if (isHost) {
             hostId = this.successChatRoomHost(roomId, userId);
         }
@@ -244,9 +244,9 @@ public class WSChatRepository {
         }
     }
 
-    public void saveMessage(WSMessage wsMessage) {
+    public WSMessage saveMessage(WSMessage wsMessage) {
         this.redisTemplate.opsForZSet().add(CHAT_ROOM_MESSAGE_KEY, wsMessage.getId(), wsMessage.getRoomId());
-        this.messageRepository.save(wsMessage);
+        return this.messageRepository.save(wsMessage);
     }
 
 
