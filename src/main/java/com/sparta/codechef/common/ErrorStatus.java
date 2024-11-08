@@ -64,7 +64,7 @@ public enum ErrorStatus implements BaseCode {
     ALREADY_ASSIGNED_USER_LANGUAGE(HttpStatus.CONFLICT, 409, "유저의 언어가 중복됩니다."),
     NOT_FOUND_USER_LANGUAGE(HttpStatus.NOT_FOUND,400, "유저의 프레임워크를 찾지 못했습니다."),
 
-    //
+    // json parsing
     JSON_CHANGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식으로 바꾸는 것을 실패 했습니다."),
     JSON_READ_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식을 읽는 것을 실패 했습니다."),
 
@@ -75,6 +75,7 @@ public enum ErrorStatus implements BaseCode {
 
     // 채팅방 관련 예외
     NOT_FOUND_CHATROOM(HttpStatus.NOT_FOUND, 404, "채팅방을 찾을 수 없습니다."),
+    FAILED_TO_CREATE_CHAT_ROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방 생성을 실패했습니다."),
     ALREADY_IN_CHATROOM(HttpStatus.CONFLICT, 409, "이미 채팅방에 접속해 있습니다."),
     ACCESS_DENIED_NOT_CORRECT_PASSWORD(HttpStatus.FORBIDDEN, 403, "잘못된 채팅방 비밀번호입니다."),
     ROOM_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, 409, "채팅방 정원이 초과되었습니다."),
@@ -91,6 +92,7 @@ public enum ErrorStatus implements BaseCode {
 
     // DB 관련 예외
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),
+    INVALID_REDIS_KEY(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 Redis Key 입니다."),
 
     // Validation 예외
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
