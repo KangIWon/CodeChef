@@ -223,6 +223,9 @@ public class BoardService {
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
         log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
+//        // 비관적 락
+//        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+//                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 

@@ -2,6 +2,8 @@ package com.sparta.codechef.domain.comment.service;
 
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
+import com.sparta.codechef.domain.alarm.config.NotificationPublisher;
+import com.sparta.codechef.domain.alarm.service.SlackService;
 import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.domain.comment.dto.CommentRequest;
@@ -33,19 +35,27 @@ public class CommentService {
     private final BoardRepository boardRepository;
     private final CommentRepository commentRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final NotificationPublisher notificationPublisher;
+    private final SlackService slackService;
 
     @Transactional
     public Void createComment(AuthUser authUser, Long boardId, CommentRequest commentRequest) {
-        User user = userRepository.findById(authUser.getUserId()).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_USER));
-        Board board = boardRepository.findById(boardId).orElseThrow(()->new ApiException(ErrorStatus.NOT_FOUND_BOARD));
+        User user = userRepository.findById(authUser.getUserId()).orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_USER));
+        Board board = boardRepository.findById(boardId).orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-        Comment comment = Comment.builder().content(commentRequest.getComment()).user(user).board(board).build();
+        Comment comment = Comment.builder()
+                .content(commentRequest.getComment())
+                .user(user)
+                .board(board)
+                .build();
         commentRepository.save(comment);
 
-        // Redis로 알림 메시지 발행 (userId 포함)
-        String channel = "commentNotifications";
+        // Redis로 알림 메시지 발행
         String message = "게시판 ID: " + boardId + "에 새로운 댓글이 작성되었습니다: " + comment.getContent() + " (작성자 ID: " + user.getId() + ")";
-        redisTemplate.convertAndSend(channel, message);
+        notificationPublisher.sendNotification(message);
+
+        // Slack으로 알림 전송
+        slackService.sendSlackMessage(message);
 
         return null;
     }
