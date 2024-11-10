@@ -2,23 +2,21 @@ name: Deploy Docker App to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 jobs:
-  deploy-to-ec2:
+  deploy-to-app-ec2:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up SSH for EC2
+      - name: Set up SSH for Application EC2
         env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.APP_EC2_HOST }}
+          EC2_USER: ${{ secrets.APP_EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.APP_SSH_PRIVATE_KEY }}
         run: |
-          echo "EC2_USER=${EC2_USER}"
-          echo "EC2_HOST=${EC2_HOST}"
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
@@ -39,24 +37,54 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      
+
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:latest .
 
       - name: Push the Docker image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest
 
-      - name: ssh to ec2
+      - name: SSH to Application EC2 and Deploy Application
         uses: appleboy/ssh-action@v1.1.0
         with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }} # 내가 변수로 저장한 pem key
-          host: ${{ secrets.EC2_HOST }} # 내가 변수로 저장한 ip
-          username: ${{ secrets.EC2_USER }} # 내가 변수로 저장한 User
+          key: ${{ secrets.APP_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.APP_EC2_HOST }}
+          username: ${{ secrets.APP_EC2_USER }}
           port: 22
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
-            docker container stop my-app
+            docker container stop my-app || true
             docker container prune -f
             docker image prune -a -f
-            docker pull "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
-            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
+            docker pull "${{ secrets.DOCKER_USERNAME }}/my-app:latest"
+            docker run -d --rm --env-file ./config/.env -p 8080:8080 --name my-app "${{ secrets.DOCKER_USERNAME }}/my-app:latest"
+
+  deploy-to-redis-ec2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH for Redis EC2
+        env:
+          EC2_HOST: ${{ secrets.REDIS_EC2_HOST }}
+          EC2_USER: ${{ secrets.REDIS_EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.REDIS_SSH_PRIVATE_KEY }}
+        run: |
+          echo "${SSH_PRIVATE_KEY}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: SSH to Redis EC2 and Deploy Redis
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.REDIS_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.REDIS_EC2_HOST }}
+          username: ${{ secrets.REDIS_EC2_USER }}
+          port: 22
+          script: |
+            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+            docker container stop redis || true
+            docker container prune -f
+            docker image prune -a -f
+            docker pull "${{ secrets.DOCKER_USERNAME }}/redis:latest"
+            docker run -d --name redis -p 6379:6379 redis:latest
