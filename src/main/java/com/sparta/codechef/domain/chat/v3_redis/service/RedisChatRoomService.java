@@ -14,7 +14,6 @@ import com.sparta.codechef.domain.chat.v3_redis.enums.RedisKey;
 import com.sparta.codechef.domain.chat.v3_redis.repository.RedisChatRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +25,6 @@ import java.util.Objects;
 
 import static com.sparta.codechef.domain.chat.v3_redis.enums.RedisHashKey.ID;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RedisChatRoomService {
@@ -46,19 +44,19 @@ public class RedisChatRoomService {
             throw new ApiException(ErrorStatus.ALREADY_IN_CHATROOM);
         }
 
-        ChatRoomDto chatRoomDto = new ChatRoomDto(
-                this.chatRepository.generateId(RedisKey.ID_CHAT_ROOM),
-                request.getTitle(),
-                request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()),
-                request.getMaxParticipants(),
-                0,
-                userId
-        );
+        ChatRoom chatRoom = ChatRoom.of(
+                new ChatRoomDto(
+                        this.chatRepository.generateId(RedisKey.ID_CHAT_ROOM),
+                        request.getTitle(),
+                        request.getPassword() == null ? null : passwordEncoder.encode(request.getPassword()),
+                        request.getMaxParticipants(),
+                        0,
+                        userId
+                ));
 
-        ChatRoom chatRoom = ChatRoom.of(chatRoomDto);
         this.chatRepository.saveChatRoom(chatRoom);
 
-        chatUser = chatUser.updateRoleAsHOST();
+        chatUser = chatUser.subscribeChatRoomAsHost(chatRoom.getId());
         this.chatRepository.saveChatUser(chatUser);
 
         return this.chatRepository.subscribeChatRoom(chatRoom.getId(), userId);
@@ -126,6 +124,9 @@ public class RedisChatRoomService {
             return this.chatRepository.subscribeChatRoom(roomId, userId);
         }
 
+        chatUser = chatUser.subscribeChatRoom(roomId);
+        this.chatRepository.saveChatUser(chatUser);
+
         throw new ApiException(ErrorStatus.ROOM_CAPACITY_EXCEEDED);
     }
 
@@ -141,7 +142,7 @@ public class RedisChatRoomService {
             throw new ApiException(ErrorStatus.NOT_IN_CHATROOM);
         }
 
-        return this.chatRepository.unsubscribeChatRoom(roomId, userId);
+        return this.chatRepository.unsubscribeChatRoom(roomId, chatUser);
     }
 
 

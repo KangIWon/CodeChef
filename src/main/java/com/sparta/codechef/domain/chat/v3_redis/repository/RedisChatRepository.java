@@ -15,14 +15,20 @@ import com.sparta.codechef.domain.chat.v3_redis.enums.ChatUserRole;
 import com.sparta.codechef.domain.chat.v3_redis.enums.RedisKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.sparta.codechef.domain.chat.v3_redis.enums.ChatUserRole.*;
+import static com.sparta.codechef.domain.chat.v3_redis.enums.ChatUserRole.ROLE_HOST;
 import static com.sparta.codechef.domain.chat.v3_redis.enums.RedisHashKey.*;
 import static com.sparta.codechef.domain.chat.v3_redis.enums.RedisKey.*;
 
@@ -74,8 +80,7 @@ public class RedisChatRepository {
      * @param userId : 채팅 유저 id
      */
     public ChatRoomGetResponse subscribeChatRoom(Long roomId, Long userId) {
-        this.redisTemplate.opsForZSet().add(SUBSCRIBE_CHAT_ROOM.getKey(),  userId, Double.valueOf(roomId));
-        this.redisTemplate.opsForHash().put(CHAT_USER.getKey(userId), ROOM_ID.getHashKey(), roomId);
+        this.redisTemplate.opsForList().rightPush(CHAT_USER_LIST.getKey(roomId),  userId);
         this.redisTemplate.opsForHash().increment(CHAT_ROOM.getKey(roomId), CUR_PARTICIPANTS.getHashKey(), 1);
 
         ChatRoomDto chatRoomDto = this.chatRoomRepository.findById(roomId).orElseThrow(
@@ -97,14 +102,16 @@ public class RedisChatRepository {
      * @param roomId : 채팅방 ID
      * @param userId : 유저 ID
      */
-    public UnsubscribeDto unsubscribeChatRoom(Long roomId, Long userId) {
+    public UnsubscribeDto unsubscribeChatRoom(Long roomId, ChatUser chatUser) {
+        Long userId = chatUser.getId();
         this.redisTemplate.opsForZSet().remove(SUBSCRIBE_CHAT_ROOM.getKey(), userId);
-        this.redisTemplate.opsForHash().delete(CHAT_USER.getKey(userId), ROOM_ID.getHashKey());
         this.redisTemplate.opsForHash().increment(CHAT_ROOM.getKey(roomId), CUR_PARTICIPANTS.getHashKey(),-1);
 
         boolean isHost = this.isHost(userId);
-        Long hostId = null;
+        chatUser = chatUser.unsubscribeChatRoom();
+        this.saveChatUser(chatUser);
 
+        Long hostId = null;
         if (isHost) {
             hostId = this.successChatRoomHost(roomId, userId);
         }
@@ -172,7 +179,7 @@ public class RedisChatRepository {
             return new PageImpl<>(new ArrayList<>(), pageable, 0);
         }
 
-        chatRoomList = chatRoomList.stream().filter(Objects::nonNull).toList();
+        chatRoomList = chatRoomList.stream().toList();
         List<ChatRoomGetResponse> responseList = IntStream.range(start, (int) Math.min(end, totalChatRoom))
                 .mapToObj(chatRoomList::get)
                 .map(ChatRoomGetResponse::new)
@@ -189,13 +196,14 @@ public class RedisChatRepository {
      * @param roomId
      * @return
      */
-    private List<String> findAllMessageIdByChatRoomId(Long roomId) {
+    private List<Long> findAllMessageIdByChatRoomId(Long roomId) {
         try {
             Double doubleRoomId = Double.valueOf(roomId);
             return Objects.requireNonNull(this.stringRedisTemplate.opsForZSet().rangeByScore(CHAT_ROOM_MESSAGE.getKey(), doubleRoomId, doubleRoomId))
                     .stream()
                     .filter(Objects::nonNull)
-                    .sorted()
+                    .mapToLong(Long::parseLong)
+                    .boxed()
                     .toList();
         } catch (NullPointerException e) {
             return new ArrayList<>();
@@ -221,23 +229,18 @@ public class RedisChatRepository {
     private List<MessageDto> findAllMessageDtoById(Long roomId) {
         List<MessageDto> messageDtoList = new ArrayList<>();
 
-        List<Long> messageIdList = this.findAllMessageIdByChatRoomId(roomId).stream()
-                .filter(Objects::nonNull)
-                .mapToLong(Long::parseLong)
-                .boxed()
-                .toList();
+        List<Long> messageIdList = this.findAllMessageIdByChatRoomId(roomId);
 
         if (messageIdList.isEmpty()) {
             return messageDtoList;
         }
 
-        Iterable<MessageDto> messageDtos = this.messageRepository.findAllById(messageIdList);
+        this.messageRepository.findAllById(messageIdList).forEach(messageDtoList::add);
+        log.info("size: {}", messageDtoList.size());
 
-        for (MessageDto messageDto : messageDtos) {
-            messageDtoList.add(messageDto);
-        }
-
-        return messageDtoList;
+        return messageDtoList.stream()
+                .sorted((o1, o2) -> (int) (o1.getId() - o2.getId()))
+                .toList();
     }
 
     /**
@@ -323,24 +326,36 @@ public class RedisChatRepository {
     }
 
     /**
+     * 방장 ID Getter
+     * @param roomId : 채팅방 ID
+     * @return
+     */
+    private Long getHostId(Long roomId) {
+        List<String> nextHostIdList = this.stringRedisTemplate.opsForList().range(CHAT_USER_LIST.getKey(roomId), 0, 0);
+
+        if (nextHostIdList == null || nextHostIdList.isEmpty()) {
+            return null;
+        }
+
+        return Long.parseLong(nextHostIdList.get(0));
+    }
+
+    /**
      * 채팅방 방장 승계할 유저 ID getter
      * @param roomId : 채팅방 ID
      * @param userId : 퇴장하는 유저 ID
      */
     public Long successChatRoomHost(Long roomId, Long userId) {
-        Set<String> userIdSet = this.findAllChatUserIdByChatRoomId(roomId);
+        this.redisTemplate.opsForList().remove(CHAT_USER_LIST.getKey(roomId), 0, userId);
 
-        this.updateChatUserRole(userId, ROLE_USER);
+        Long nextHostId = this.getHostId(roomId);
+        ChatUser nextHost = this.findChatUserById(nextHostId);
+        nextHost = nextHost.updateRoleAsHOST();
+        this.saveChatUser(nextHost);
 
-        if (userIdSet == null || userIdSet.isEmpty()) {
-            this.redisTemplate.delete(CHAT_ROOM.getKey(roomId));
-            return null;
-        }
-
-        String strNextHostId = userIdSet.stream().toList().get(0);
-        Long nextHostId = Long.parseLong(strNextHostId);
-        this.updateChatUserRole(nextHostId, ROLE_HOST);
-        this.updateHost(roomId, nextHostId);
+        ChatRoom chatRoom = this.findChatRoomById(roomId);
+        chatRoom = chatRoom.updateHost(nextHostId);
+        this.saveChatRoom(chatRoom);
 
         return nextHostId;
     }

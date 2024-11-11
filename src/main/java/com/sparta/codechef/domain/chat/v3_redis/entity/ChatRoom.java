@@ -42,4 +42,8 @@ public class ChatRoom {
                 chatRoom.getHostId()
         );
     }
+
+    public ChatRoom updateHost(Long nextHostId) {
+        return new ChatRoom(this.id, this.title, this.password, this.getMaxParticipants(),this.curParticipants, nextHostId);
+    }
 }

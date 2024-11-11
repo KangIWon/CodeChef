@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.chat.v3_redis.service;
 
 import com.sparta.codechef.domain.chat.v3_redis.entity.ChatUser;
+import com.sparta.codechef.domain.chat.v3_redis.enums.Subscribe;
 import com.sparta.codechef.domain.chat.v3_redis.repository.RedisChatRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -15,24 +16,14 @@ public class RedisChatService {
     private final MessageListenerAdapter messageListener;
     private final RedisChatRepository chatRepository;
 
-    private final String QUEUE_KEY = "/queue/";
-    private final String TOPIC_KEY = "/topic";
-    private final String CHAT_ROOM_KEY = "/chat-room/";
-
     // 웹 소켓 연결 후, 채팅 유저 저장
     public void connectChatUser(ChatUser chatUser) {
         this.chatRepository.saveChatUser(chatUser);
-
-        ChannelTopic topic = this.getInitTopic(chatUser.getId());
-        this.addTopic(topic);
     }
 
     // 웹 소켓 연결 해제 후, 채팅 유저 삭제
     public void disconnectChatUser(Long userId) {
         this.chatRepository.deleteChatUserById(userId);
-
-        ChannelTopic topic = this.getInitTopic(userId);
-        this.removeTopic(topic);
     }
 
 
@@ -61,8 +52,8 @@ public class RedisChatService {
     public ChannelTopic getTopic(Long roomId) {
         return new ChannelTopic(
                 new StringBuffer()
-                        .append(TOPIC_KEY)
-                        .append(CHAT_ROOM_KEY)
+                        .append(Subscribe.TOPIC_PREFIX.getKey())
+                        .append(Subscribe.CHAT_ROOM.getKey())
                         .append(roomId)
                         .toString()
         );
@@ -73,10 +64,13 @@ public class RedisChatService {
      * @param userId : 유저 ID
      * @return
      */
-    public ChannelTopic getInitTopic(Long userId) {
+    public ChannelTopic getInitTopic(Long roomId, Long userId) {
         return new ChannelTopic(
                 new StringBuffer()
-                        .append(QUEUE_KEY)
+                        .append(Subscribe.TOPIC_PREFIX.getKey())
+                        .append(Subscribe.CHAT_ROOM.getKey())
+                        .append(roomId)
+                        .append(Subscribe.INIT.getKey())
                         .append(userId)
                         .toString()
         );

@@ -16,6 +16,7 @@ public enum RedisKey {
     // 채팅 유저
     ID_CHAT_USER("id:chatUser"),
     CHAT_USER("chatUser:"),
+    CHAT_USER_LIST("chatUserList:"),
 
     // 메세지
     ID_MESSAGE("id:message"),
@@ -29,7 +30,7 @@ public enum RedisKey {
     }
 
     public String getKey(Long id) {
-        if (this.equals(CHAT_ROOM) || this.equals(CHAT_USER)) {
+        if (this.equals(CHAT_ROOM) || this.equals(CHAT_USER) || this.equals(CHAT_USER_LIST)) {
             return new StringBuffer()
                     .append(this.key)
                     .append(id)

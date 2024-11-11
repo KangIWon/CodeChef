@@ -23,20 +23,20 @@ public class RedisChatController {
 
     private final RedisMessageService messageService;
 
-    /**
-     * 이전 채팅 메세지 불러오기
-     * @param roomId : 채팅방 ID
-     * @return 채팅 메세지 리스트
-     */
-    @SubscribeMapping("/chat-room/{roomId}/init")
-    public void handleInitMessages(@DestinationVariable Long roomId,
-                                   SimpMessageHeaderAccessor headerAccessor
-    ) {
-        ChatUser chatUser = this.getChatUser(headerAccessor);
-        Long userId = chatUser.getId();
-        log.info("init message room:{}, user:{}", roomId, userId);
-        this.messageService.getMessages(roomId, userId);
-    }
+//    /**
+//     * 이전 채팅 메세지 불러오기
+//     * @param roomId : 채팅방 ID
+//     * @return 채팅 메세지 리스트
+//     */
+//    @MessageMapping("/chat-room/{roomId}/init")
+//    public void handleInitMessages(@DestinationVariable Long roomId,
+//                                   SimpMessageHeaderAccessor headerAccessor
+//    ) {
+//        ChatUser chatUser = this.getChatUser(headerAccessor);
+//        Long userId = chatUser.getId();
+//        log.info("init message room:{}, user:{}", roomId, userId);
+//        this.messageService.getMessages(roomId, userId);
+//    }
 
 
     /**
@@ -51,7 +51,7 @@ public class RedisChatController {
     ) {
         ChatUser chatUser = this.getChatUser(headerAccessor);
         log.info("subscribe : chat-room-{}, host : {}", roomId, chatUser.getId());
-
+        this.messageService.getMessages(roomId, chatUser.getId());
         this.messageService.subscribeChatRoom(roomId, chatUser);
     }
 

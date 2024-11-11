@@ -40,12 +40,14 @@ public class RedisMessageService {
      * @param userId : 유저 ID
      */
     public void getMessages(Long roomId, Long userId) {
-        ChannelTopic initTopic = this.chatService.getInitTopic(userId);
+        ChannelTopic initTopic = this.chatService.getInitTopic(roomId, userId);
+
         List<MessageGetResponse> messageList = this.chatRepository.findAllMessageGetResponseById(roomId);
         if (messageList.isEmpty()) {
             return;
         }
 
+        this.chatService.addTopic(initTopic);
         messageList.stream()
                 .filter(Objects::nonNull)
                 .forEach(message -> this.redisPublisher.publish(initTopic, message));
@@ -68,7 +70,6 @@ public class RedisMessageService {
         String email = chatUser.getEmail();
 
         if (Objects.equals(hostId, chatUser.getId())) {
-            log.info("채팅방 생성");
             this.chatService.addTopic(topic);
 
             Message message = Message.getMessage(
@@ -83,7 +84,6 @@ public class RedisMessageService {
             return;
         }
 
-        log.info("채팅방 입장");
         Message message = Message.getMessage(
                 this.chatRepository.generateId(ID_MESSAGE),
                 IN,
@@ -132,6 +132,8 @@ public class RedisMessageService {
      */
     public void unsubscribeChatRoom(Long roomId, UnsubscribeDto dto, ChatUser chatUser) {
         ChannelTopic topic = this.chatService.getTopic(roomId);
+        ChannelTopic initTopic = this.chatService.getInitTopic(roomId, chatUser.getId());
+        this.chatService.removeTopic(initTopic);
 
         boolean isSuccess = dto.isSuccess();
         Long nextHostId = dto.getNextHostId();

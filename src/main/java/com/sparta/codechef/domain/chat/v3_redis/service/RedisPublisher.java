@@ -2,6 +2,7 @@ package com.sparta.codechef.domain.chat.v3_redis.service;
 
 import com.sparta.codechef.domain.chat.v3_redis.dto.response.MessageGetResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.util.Map;
 
 import static com.sparta.codechef.domain.chat.v3_redis.enums.RedisHashKey.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RedisPublisher {
@@ -27,10 +29,11 @@ public class RedisPublisher {
         );
     }
 
-    public void publish(ChannelTopic topic, String data) {
-        redisTemplate.convertAndSend(topic.getTopic(), data);
-    }
-
+    /**
+     * MessageGetResponse 객체를 Map으로 변환
+     * @param message : 발행할 메세지 객체
+     * @return
+     */
     private Map<String, String> convertMessageToMap(MessageGetResponse message) {
         return Map.of(
                 ID.getHashKey(), message.getId(),

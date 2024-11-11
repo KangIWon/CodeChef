@@ -29,23 +29,43 @@ public class ChatUser {
         );
     }
 
-    public ChatUser updateChatRoom(Long roomId) {
-        return new ChatUser(this.id, this.email, this.role, roomId);
-    }
-
     public static ChatUser fromAuthUser(AuthUser authUser) {
         return new ChatUser(authUser.getUserId(), authUser.getEmail(), ChatUserRole.of(authUser.getUserRole()), null);
     }
 
+    /**
+     * 방장으로 권한 변경
+     * @return
+     */
     public ChatUser updateRoleAsHOST() {
         return new ChatUser(this.id, this.email, ChatUserRole.ROLE_HOST, this.roomId);
     }
 
-    public ChatUser updateRoleAsUSER() {
-        return new ChatUser(this.id, this.email, ChatUserRole.ROLE_USER, this.roomId);
+    /**
+     * 채팅방 구독
+     * @param roomId : 채팅방 ID
+     * @return
+     */
+    public ChatUser subscribeChatRoom(Long roomId) {
+        return new ChatUser(this.id, this.email, ChatUserRole.ROLE_USER, roomId);
     }
 
-    public ChatUser createChatRoom(Long roomId) {
+    /**
+     * 채팅방 구독 & 방장 권한
+     * @param roomId : 채팅방 ID
+     * @return
+     */
+    public ChatUser subscribeChatRoomAsHost(Long roomId) {
         return new ChatUser(this.id, this.email, ChatUserRole.ROLE_HOST, roomId);
+    }
+
+    /**
+     * 채팅방 구독 취소
+     *   - 유저 권한 : ROLE_USER
+     *   - 구독 채팅방 ID : null
+     * @return ChatUser 객체
+     */
+    public ChatUser unsubscribeChatRoom() {
+        return new ChatUser(this.id, this.email, ChatUserRole.ROLE_USER, null);
     }
 }

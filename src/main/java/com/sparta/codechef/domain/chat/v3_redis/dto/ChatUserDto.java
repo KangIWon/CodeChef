@@ -10,12 +10,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.redis.core.RedisHash;
 
+import java.io.Serializable;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @RedisHash("chatUser")
-public class ChatUserDto {
+public class ChatUserDto implements Serializable {
     @Id
     private Long id;
     @NotNull
