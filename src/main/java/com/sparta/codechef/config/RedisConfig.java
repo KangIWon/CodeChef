@@ -2,7 +2,7 @@ package com.sparta.codechef.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.sparta.codechef.domain.alarm.config.RedisSubscriber;
+//import com.sparta.codechef.domain.alarm.config.RedisSubscriber;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -85,12 +85,12 @@ public class RedisConfig {
                 .build();
     }
 
-    @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory,
-                                                                       RedisSubscriber redisSubscriber) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        container.addMessageListener(redisSubscriber, new ChannelTopic("notifications")); // "notifications" 채널 구독
-        return container;
-    }
+//    @Bean
+//    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory,
+//                                                                       RedisSubscriber redisSubscriber) {
+//        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+//        container.setConnectionFactory(connectionFactory);
+//        container.addMessageListener(redisSubscriber, new ChannelTopic("notifications")); // "notifications" 채널 구독
+//        return container;
+//    }
 }

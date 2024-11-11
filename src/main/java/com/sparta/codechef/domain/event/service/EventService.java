@@ -35,9 +35,9 @@ public class EventService {
         eventCounter.set(100);
         eventCounter.expire(1, TimeUnit.HOURS);
 
-        // Redis로 알림 메시지 발행
+        // 이벤트 알림 발행
         String message = "이벤트가 시작되었습니다.";
-        notificationPublisher.sendNotification(message);
+        notificationPublisher.sendEventNotification(message);
 
         // Slack으로 알림 전송
         slackService.sendSlackMessage(message);

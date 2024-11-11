@@ -24,6 +24,13 @@ spring:
     username: ${ELASTIC_USERNAME}
     password: ${ELASTIC_PASSWORD}
     uris: ${ELASTIC_IP_PORT}
+  rabbitmq:
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    host: ${RABBITMQ_HOST}
+    port:
+      - ${RABBITMQ_PORT1}
+      - ${RABBITMQ_PORT2}
 management:
   health:
     elasticsearch:
