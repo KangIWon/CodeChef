@@ -42,6 +42,11 @@ public class CommentService {
         Comment comment = Comment.builder().content(commentRequest.getComment()).user(user).board(board).build();
         commentRepository.save(comment);
 
+        // Redis로 알림 메시지 발행 (userId 포함)
+        String channel = "commentNotifications";
+        String message = "게시판 ID: " + boardId + "에 새로운 댓글이 작성되었습니다: " + comment.getContent() + " (작성자 ID: " + user.getId() + ")";
+        redisTemplate.convertAndSend(channel, message);
+
         return null;
     }
 
@@ -90,7 +95,7 @@ public class CommentService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
+        List<Comment> commentList = commentRepository.findCommentByBoardId(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
         );
 

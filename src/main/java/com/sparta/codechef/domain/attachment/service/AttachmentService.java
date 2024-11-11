@@ -12,7 +12,6 @@ import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -54,7 +53,7 @@ public class AttachmentService {
     /**
      * 게시글에 첨부된 첨부파일 조회
      * @param boardId : 게시글 ID
-     * @return 첨부파일 정보 리스트(파일명, URL)
+     * @return 첨부파일 정보 리스트(파일명, cloudFrontFileURL)
      */
     public List<AttachmentResponse> getFiles(Long boardId) {
         boolean isPresentBoard = this.boardRepository.existsById(boardId);
@@ -80,7 +79,6 @@ public class AttachmentService {
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
     }
 
-
     // S3 요청 메서드
     /**
      * S3에 업로드된 게시물의 첨부파일 key 리스트 조회
@@ -103,7 +101,7 @@ public class AttachmentService {
      * 단일 첨부파일 업로드
      * @param boardId : 게시글 ID
      * @param file : 첨부파일
-     * @return 첨부파일 정보(파일명, URL)
+     * @return 첨부파일 정보(파일명, cloudFrontFileURL)
      */
     public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
         String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
@@ -160,10 +158,6 @@ public class AttachmentService {
      * @return "/board/{boardId}/{파일명}/{확장자}
      */
     private String getS3Key(Long boardId, String originalFileName) {
-        if (originalFileName.length() > 25) {
-            originalFileName = originalFileName.substring(0, 26);
-        }
-
         return new StringBuffer()
                         .append(this.getPath(boardId))
                         .append(originalFileName)
@@ -213,8 +207,30 @@ public class AttachmentService {
     }
 
     private void validateAttachmentFiles(List<MultipartFile> fileList) {
-        fileList.stream().filter(file -> file.getSize() > MAX_FILE_SIZE).findFirst().ifPresent(file -> {
-            throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+        if (fileList.isEmpty()) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
+        fileList.stream()
+                .filter(Objects::nonNull)
+                .forEach(file -> {
+            if (file.getSize() > MAX_FILE_SIZE) {
+                throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+            }
+
+            String fileName = file.getOriginalFilename();
+            if (fileName == null) {
+                throw new ApiException(ErrorStatus.ATTACHMENT_NAME_IS_NULL);
+            }
+
+            if (fileName.isBlank()) {
+                throw new ApiException(ErrorStatus.ATTACHMENT_NAME_IS_EMPTY);
+            }
+
+            if (fileName.length() > 25) {
+                throw new ApiException(ErrorStatus.FILENAME_IS_TOO_LONG);
+            }
+
         });
 
         long totalSize = fileList.stream().mapToLong(MultipartFile::getSize).sum();
@@ -231,18 +247,6 @@ public class AttachmentService {
 
         if (distinctFileNames != fileList.size()) {
             throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
-        }
-
-
-        boolean isEmptyAttachmentList = fileList.stream()
-                .filter(Objects::nonNull)
-                .map(MultipartFile::getOriginalFilename)
-                .filter(Objects::nonNull)
-                .filter(fileName -> !fileName.isBlank())
-                .toList().isEmpty();
-
-        if (isEmptyAttachmentList) {
-            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
         }
     }
 }

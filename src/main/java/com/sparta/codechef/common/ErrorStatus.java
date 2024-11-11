@@ -39,12 +39,14 @@ public enum ErrorStatus implements BaseCode {
 
     // 첨부파일 관련 예외
     NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "중복된 이름의 첨부파일이 존재합니다."),
+    ATTACHMENT_NAME_IS_EMPTY(HttpStatus.BAD_REQUEST, 400, "첨부파일 이름은 공백이 될 수 없습니다."),
     ATTACHMENT_NAME_IS_NULL(HttpStatus.BAD_REQUEST, 400, "첨부파일 이름이 NULL이 될 수 없습니다."),
     EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가된 첨부파일이 존재하지 않습니다."),
     MAX_UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "단일 첨부파일은 최대 5MB까지 업로드 가능합니다."),
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
     FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
     FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
+    FILENAME_IS_TOO_LONG(HttpStatus.BAD_REQUEST, 400, "첨부파일명이 너무 깁니다. 25자 이내로 줄여서 업로드 해 주십시오."),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
@@ -97,11 +99,14 @@ public enum ErrorStatus implements BaseCode {
     // Validation 예외
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
 
+    // 낙관적 락 예외 처리
+    OPTIMISTIC_LOCK_FAILED(HttpStatus.NO_CONTENT, 204, "다시 시도해 주세요."),
     EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
     NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다."),
 
-    // 낙관적 락 예외 처리
-    OPTIMISTIC_LOCK_FAILED(HttpStatus.NO_CONTENT, 204, "다시 시도해 주세요.");
+    // 알람 관련 예외 처리
+    NOT_FOUND_ALARM(HttpStatus.NOT_FOUND, 404, "유저의 알림이 존재하지 않습니다."),
+    NOT_FOUND_ALARM_UNREAD(HttpStatus.NOT_FOUND, 404, "읽지 않은 알림이 존재하지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;
