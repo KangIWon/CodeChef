@@ -9,11 +9,13 @@ import com.sparta.codechef.domain.user.repository.UserRepository;
 import com.sparta.codechef.domain.alarm.config.NotificationPublisher;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.*;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -31,9 +33,12 @@ public class EventService {
         if (!authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
 
+        Integer eventCoin = 100;
+        redisTemplate.opsForValue().set("event", eventCoin, Duration.ofHours(1));
+
         RAtomicLong eventCounter = redissonClient.getAtomicLong("event");
-        eventCounter.set(100);
-        eventCounter.expire(1, TimeUnit.HOURS);
+        eventCounter.set(100); // 초기값 설정
+        eventCounter.expire(1, TimeUnit.HOURS); // 만료 시간 설정
 
         // 이벤트 알림 발행
         String message = "이벤트가 시작되었습니다.";
@@ -46,7 +51,7 @@ public class EventService {
     }
 
     @Transactional
-    public Void eventPoints2(AuthUser authUser) {
+    public Void eventPoints(AuthUser authUser) {
         // 업데이트를 위해 유저를 조회
         User user = userRepository.findById(authUser.getUserId()).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
@@ -69,11 +74,11 @@ public class EventService {
 
                     if (event >= 0) {
                         checkAttendance(user, 1000);
-//                        user.isAttended();
+                        user.isAttended();
                         user.updateLastAttendDate();
                     } else {
                         // 이벤트 종료 후, 남은 포인트가 없을 때
-                        eventCounter.set(0); // 값이 음수로 내려가지 않도록 0으로 설정
+                        eventCounter.delete();
                         throw new ApiException(ErrorStatus.EVENT_END);
                     }
                     return null;
@@ -87,33 +92,25 @@ public class EventService {
         return null;
     }
 
-
     @Transactional
     public void checkAttendance(User user, int points) {
-
         String redisKey = "user:" + user.getId() + ":points";
-        redissonClient.getAtomicLong(redisKey).addAndGet(points); // Redis에 누적 점수 업데이트
+        redisTemplate.opsForValue().increment(redisKey, points);
+        redisTemplate.expire(redisKey, Duration.ofMinutes(10));
 
-        // TTL 설정을 위해 RBucket 사용
-        RBucket<Object> bucket = redissonClient.getBucket(redisKey);
-        bucket.expire(10, TimeUnit.MINUTES); // TTL을 10분으로 설정
-        // 이벤트에서 받은 포인트 저장
+        // 이벤트에서 받은 포인트를 DB에 저장
         syncPointsToDatabase();
     }
 
     @Transactional
     public void syncPointsToDatabase() {
-        // Redis에서 모든 사용자 점수 조회 및 DB 업데이트 로직 구현
-        RKeys keys = redissonClient.getKeys(); // RKeys 객체를 얻음
-        Iterable<String> matchingKeys = keys.getKeysByPattern("user:*:points"); // 패턴에 맞는 모든 키 조회
-
-        for (String redisKey : matchingKeys) {
+        redisTemplate.keys("user:*:points").forEach(redisKey -> {
             String userIdString = redisKey.replaceAll("user:(\\d+):points", "$1");
             long id = Long.parseLong(userIdString);
-            int points = (int) redissonClient.getAtomicLong(redisKey).getAndSet(0); // Redis 값 초기화 후 가져오기
-            userRepository.updatePoints(points, id); // DB에 점수 업데이트
-            redissonClient.getBucket(redisKey).delete();
-        }
+            int points = (int) redisTemplate.opsForValue().get(redisKey);
+            userRepository.updatePoints(points, id);
+            redisTemplate.delete(redisKey);
+        });
 
     }
 }

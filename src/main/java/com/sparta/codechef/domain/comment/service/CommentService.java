@@ -107,7 +107,7 @@ public class CommentService {
                 () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
         );
 
-        List<Comment> commentList = commentRepository.findByBoardId(boardId).orElseThrow(
+        List<Comment> commentList = commentRepository.findCommentByBoardId(boardId).orElseThrow(
                 () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
         );
 

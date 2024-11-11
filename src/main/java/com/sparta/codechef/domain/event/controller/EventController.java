@@ -24,8 +24,7 @@ public class EventController {
     }
 
     @PostMapping
-    public ApiResponse event2(@AuthenticationPrincipal AuthUser authUser) {
-        return ApiResponse.ok("", eventService.eventPoints2(authUser));
-
+    public ApiResponse event(@AuthenticationPrincipal AuthUser authUser) {
+        return ApiResponse.ok("이벤트 참여 완료", eventService.eventPoints(authUser));
     }
 }

@@ -1,5 +1,6 @@
 package com.sparta.codechef.domain.chat.v1.dto.request;
 
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 

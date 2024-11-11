@@ -11,6 +11,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -136,7 +137,7 @@ public class JwtUtil {
                 .setExpiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
-                .claim("userRole", role.getUserRole())
+                .claim("userRole", role)
                 .setIssuedAt(now)
                 .signWith(key)
                 .compact();
