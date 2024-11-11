@@ -24,14 +24,22 @@ spring:
     username: ${ELASTIC_USERNAME}
     password: ${ELASTIC_PASSWORD}
     uris: ${ELASTIC_IP_PORT}
+    # 아래 누가 추가하셨는지 물어보기
   data:
     redis:
       host: ${REDIS_HOST_NAME}
+  rabbitmq:
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    host: ${RABBITMQ_HOST}
+    port:
+      - ${RABBITMQ_PORT1}
+      - ${RABBITMQ_PORT2}
+#위에 elasticsearch가 있는데 아래 왜 추가 되었는지 물어보기
 management:
   health:
     elasticsearch:
       enabled: false
-
 
   kafka:
     bootstrap-servers: localhost:9092  # Kafka 서버 주소
