@@ -27,7 +27,7 @@ import java.time.Duration;
 @EnableCaching // 캐시 기능 활성화
 public class RedisConfig {
 
-    @Value("${REDIS_HOST_NAME}")
+    @Value("${spring.data.redis.host}")
     private String localhost;
 
     @Bean
@@ -81,5 +81,4 @@ public class RedisConfig {
                 .transactionAware() // 트랜잭션 지원
                 .build();
     }
-
 }

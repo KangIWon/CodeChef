@@ -95,7 +95,11 @@ public enum ErrorStatus implements BaseCode {
     // 낙관적 락 예외 처리
     OPTIMISTIC_LOCK_FAILED(HttpStatus.NO_CONTENT, 204, "다시 시도해 주세요."),
     EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
-    NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다.");
+    NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다."),
+
+    // 알람 관련 예외 처리
+    NOT_FOUND_ALARM(HttpStatus.NOT_FOUND, 404, "유저의 알림이 존재하지 않습니다."),
+    NOT_FOUND_ALARM_UNREAD(HttpStatus.NOT_FOUND, 404, "읽지 않은 알림이 존재하지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;
