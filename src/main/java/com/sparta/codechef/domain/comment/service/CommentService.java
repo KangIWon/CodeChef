@@ -50,9 +50,11 @@ public class CommentService {
                 .build();
         commentRepository.save(comment);
 
-        // Redis로 알림 메시지 발행
+        // 게시글 작성자에게 알림 전송
+        User boardOwner = board.getUser();
         String message = "게시판 ID: " + boardId + "에 새로운 댓글이 작성되었습니다: " + comment.getContent() + " (작성자 ID: " + user.getId() + ")";
-        notificationPublisher.sendNotification(message);
+        // 게시글 작성자의 userId를 포함하여 전송
+        notificationPublisher.sendCommentNotification("게시글 작성자 ID: " + boardOwner.getId() + " - " + message);
 
         // Slack으로 알림 전송
         slackService.sendSlackMessage(message);
