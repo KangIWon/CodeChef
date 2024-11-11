@@ -24,6 +24,8 @@ spring:
     username: ${ELASTIC_USERNAME}
     password: ${ELASTIC_PASSWORD}
     uris: ${ELASTIC_IP_PORT}
+
+
 management:
   health:
     elasticsearch:
@@ -64,3 +66,18 @@ cloudfront:
 slack:
   webhook:
     url: ${SLACK_WEBHOOK_URL}
+
+logging:
+  level:
+    root: INFO  # 로그 레벨 설정
+    com.example: DEBUG  # 필요한 패키지에 대해 로그 레벨 설정
+
+  logback:
+    appenders:
+      logstash:
+        type: logstash # Logstash 타입 설정
+        destination: "logstash:5044" # Logstash 호스트 및 포트 (Logstash가 Docker에서 실행된다면 컨테이너 이름 사용)
+        encoder:
+          pattern: '%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n'
+          custom-fields:
+            appName: ${spring.application.name} # 로그에 애플리케이션 이름 포함
