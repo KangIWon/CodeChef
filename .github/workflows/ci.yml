@@ -48,8 +48,8 @@ jobs:
         uses: appleboy/ssh-action@v1.1.0
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          host: ${{ secrets.APP_EC2_HOST }}
-          username: ${{ secrets.APP_EC2_USER }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
           port: 22
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
