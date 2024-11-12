@@ -3,6 +3,7 @@ package com.sparta.codechef.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sparta.codechef.domain.chat.v3_redis.service.RedisSubscriber;
+//import com.sparta.codechef.domain.alarm.config.RedisSubscriber;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -19,6 +20,8 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -31,7 +34,7 @@ import java.time.Duration;
 @EnableCaching // 캐시 기능 활성화
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
+    @Value("${REDIS_HOST_NAME}")
     private String localhost;
 
     @Bean
@@ -70,7 +73,7 @@ public class RedisConfig {
     }
 
     @Bean
-    public CacheManager cacheManager() {
+    public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
@@ -80,7 +83,7 @@ public class RedisConfig {
                 .entryTtl(Duration.ofMinutes(10)) // 캐시 만료 시간 설정
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer));
 
-        return RedisCacheManager.builder(redisConnectionFactory())
+        return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(cacheConfig)
                 .transactionAware() // 트랜잭션 지원
                 .build();
@@ -101,4 +104,13 @@ public class RedisConfig {
     public MessageListenerAdapter messageListener(SimpMessagingTemplate template) {
         return new MessageListenerAdapter(new RedisSubscriber(template), "onMessage");
     }
+
+//    @Bean
+//    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory,
+//                                                                       RedisSubscriber redisSubscriber) {
+//        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+//        container.setConnectionFactory(connectionFactory);
+//        container.addMessageListener(redisSubscriber, new ChannelTopic("notifications")); // "notifications" 채널 구독
+//        return container;
+//    }
 }

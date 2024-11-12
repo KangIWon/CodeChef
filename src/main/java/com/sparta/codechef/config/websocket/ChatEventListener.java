@@ -67,10 +67,6 @@ public class ChatEventListener extends TextWebSocketHandler {
         SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
         ChatUser chatUser = (ChatUser) simpAttributes.getAttribute("chatUser");
 
-//        if (chatUser == null) {
-//            throw new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER);
-//        }
-
         if (chatUser != null) {
             this.chatService.disconnectChatUser(chatUser.getId());
         }

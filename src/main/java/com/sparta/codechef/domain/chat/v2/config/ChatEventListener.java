@@ -1,7 +1,5 @@
 //package com.sparta.codechef.domain.chat.v2.config;
 //
-//import com.sparta.codechef.common.ErrorStatus;
-//import com.sparta.codechef.common.exception.ApiException;
 //import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 //import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 //import lombok.RequiredArgsConstructor;
@@ -11,7 +9,6 @@
 //import org.springframework.messaging.simp.SimpAttributesContextHolder;
 //import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 //import org.springframework.stereotype.Component;
-//import org.springframework.web.socket.handler.TextWebSocketHandler;
 //import org.springframework.web.socket.messaging.SessionConnectedEvent;
 //import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 //import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -20,10 +17,9 @@
 //@Slf4j
 //@Component
 //@RequiredArgsConstructor
-//public class ChatEventListener extends TextWebSocketHandler {
+//public class ChatEventListener {
 //
 //    private final WSChatService wsChatService;
-//
 //
 //    // 웹 소켓 연결 요청 처리
 //    @EventListener
@@ -34,7 +30,10 @@
 //        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
 //        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
 //
-//        this.wsChatService.connectChatUser(chatUser);
+//        if (chatUser != null) {
+//            this.wsChatService.connectChatUser(chatUser);
+//        }
+//
 //
 //        log.info("WebSocket connected, sessionId : {}", sessionId);
 //    }
@@ -64,14 +63,13 @@
 //        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 //        String sessionId = headerAccessor.getSessionId();
 //
+//
 //        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
 //        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
 //
-//        if (chatUser == null) {
-//            throw new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER);
+//        if (chatUser != null) {
+//            this.wsChatService.disconnectChatUser(chatUser.getId());
 //        }
-//
-//        this.wsChatService.disconnectChatUser(chatUser.getId());
 //
 //        log.info("WebSocket disconnected, sessionId : {}", sessionId);
 //    }

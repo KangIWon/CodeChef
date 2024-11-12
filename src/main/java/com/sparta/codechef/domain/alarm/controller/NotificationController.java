@@ -17,6 +17,12 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+//    @PostMapping("/send")
+//    public ResponseEntity<String> sendNotification(@RequestParam String message) {
+//        notificationPublisher.sendNotification(message);
+//        return ResponseEntity.ok("Notification sent: " + message);
+//    }
+
     // 모든 알림 가져오기
     @GetMapping("/all")
     public ApiResponse<List<NotificationResponse>> getAllNotifications(@AuthenticationPrincipal AuthUser user) {
