@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup", "/api/boards",
-                                "/api/boards/search/**", "/ws-chat", "/error",
+                                "/api/boards/search/**", "/ws-chat", "/ws-alarm", "/error",
                                 "/v3/api-docs/**","/swagger-ui/**","/api-test"
                         ).permitAll()
                         .requestMatchers("/test").hasAuthority(UserRole.Authority.ADMIN)

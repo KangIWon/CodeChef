@@ -3,18 +3,18 @@ package com.sparta.codechef.domain.event.service;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
+import com.sparta.codechef.domain.alarm.service.SlackService;
 import com.sparta.codechef.domain.user.entity.User;
 import com.sparta.codechef.domain.user.repository.UserRepository;
+import com.sparta.codechef.domain.alarm.config.NotificationPublisher;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.redisson.api.RAtomicLong;
-import org.redisson.api.RKeys;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -24,13 +24,12 @@ import java.util.concurrent.TimeUnit;
 public class EventService {
 
     private final UserRepository userRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final RedissonClient redissonClient;
-
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final NotificationPublisher notificationPublisher;
+    private final SlackService slackService;
 
     public Void eventStart(AuthUser authUser) {
-
-
         if (!authUser.getUserRole().equals(UserRole.ROLE_ADMIN))
             throw new ApiException(ErrorStatus.FORBIDDEN_TOKEN);
 
@@ -41,14 +40,15 @@ public class EventService {
         eventCounter.set(100); // 초기값 설정
         eventCounter.expire(1, TimeUnit.HOURS); // 만료 시간 설정
 
-
-        // Redis로 알림 메시지 발행
-        String channel = "eventNotifications";
+        // 이벤트 알림 발행
         String message = "이벤트가 시작되었습니다.";
-        redisTemplate.convertAndSend(channel, message);
+        notificationPublisher.sendEventNotification(message);
+
+        // Slack으로 알림 전송
+        slackService.sendSlackMessage(message);
+
         return null;
     }
-
 
     @Transactional
     public Void eventPoints(AuthUser authUser) {

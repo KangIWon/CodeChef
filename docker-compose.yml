@@ -1,7 +1,186 @@
 version: "3.8"
 
 services:
-  # Elasticsearch
+  #rabbitmq
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    volumes:
+      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+    ports:
+      - ${RABBITMQ_PORT1}
+      - ${RABBITMQ_PORT2}
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+
+  # master
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    hostname: redis-master
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/master:/data
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--repl-diskless-load",
+        "on-empty-db",
+        "--replica-announce-ip",
+        "${REDIS_HOST_NAME}",
+        "--replica-announce-port",
+        "6379",
+        "--protected-mode",
+        "no"
+      ]
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.3
+
+  # slave1
+  redis-slave-1:
+    image: redis:latest
+    container_name: redis-slave-1
+    hostname: redis-slave-1
+    depends_on:
+      - redis-master
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./data/slave1:/data
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--replicaof",
+        "redis-master",
+        "6379",
+        "--repl-diskless-load",
+        "on-empty-db",
+        "--replica-announce-ip",
+        "${REDIS_HOST_NAME}",
+        "--replica-announce-port",
+        "6380",
+        "--protected-mode",
+        "no"
+      ]
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.4
+
+  # slave2
+  redis-slave-2:
+    image: redis:latest
+    container_name: redis-slave-2
+    hostname: redis-slave-2
+    depends_on:
+      - redis-master
+    ports:
+      - "6381:6379"
+    volumes:
+      - ./data/slave2:/data
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--replicaof",
+        "redis-master",
+        "6379",
+        "--repl-diskless-load",
+        "on-empty-db",
+        "--replica-announce-ip",
+        "${REDIS_HOST_NAME}",
+        "--replica-announce-port",
+        "6381",
+        "--protected-mode",
+        "no"
+      ]
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.5
+
+  # sentinel1
+  sentinel-1:
+    image: redis:latest
+    container_name: sentinel-1
+    hostname: sentinel-1
+    depends_on:
+      - redis-master
+    ports:
+      - "26379:26379"
+    command: >
+      sh -c 'echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+            echo "sentinel monitor mymaster ${REDIS_HOST_NAME} 6379 2" >> /etc/sentinel.conf &&
+            echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+            echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+            redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.6
+
+  # sentinel2
+  sentinel-2:
+    image: redis:latest
+    container_name: sentinel-2
+    hostname: sentinel-2
+    depends_on:
+      - redis-master
+    ports:
+      - "26380:26379"
+    command: >
+      sh -c 'echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+            echo "sentinel monitor mymaster ${REDIS_HOST_NAME} 6379 2" >> /etc/sentinel.conf &&
+            echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+            echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+            redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.7
+
+  # sentinel3
+  sentinel-3:
+    image: redis:latest
+    container_name: sentinel-3
+    hostname: sentinel-3
+    depends_on:
+      - redis-master
+    ports:
+      - "26381:26379"
+    command: >
+      sh -c 'echo "bind 0.0.0.0" > /etc/sentinel.conf &&
+            echo "sentinel monitor mymaster ${REDIS_HOST_NAME} 6379 2" >> /etc/sentinel.conf &&
+            echo "sentinel resolve-hostnames yes" >> /etc/sentinel.conf &&
+            echo "sentinel down-after-milliseconds mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel failover-timeout mymaster 10000" >> /etc/sentinel.conf &&
+            echo "sentinel parallel-syncs mymaster 1" >> /etc/sentinel.conf &&
+            redis-sentinel /etc/sentinel.conf'
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.8
+
+  # redisinsight
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "5540:5540"
+    networks:
+      redis-network:
+        ipv4_address: 172.21.0.9
+
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: es01
@@ -17,8 +196,8 @@ services:
       - "9200:9200"
       - "9300:9300"
     networks:
-      elastic-network:
-        ipv4_address: 172.23.0.10
+      redis-network:
+        ipv4_address: 172.21.0.10
     ulimits:
       memlock:
         soft: -1
@@ -27,8 +206,6 @@ services:
       - esdata:/usr/share/elasticsearch/data
     command: >
       /bin/sh -c "if [ ! -d plugins/analysis-nori ]; then bin/elasticsearch-plugin install analysis-nori; fi; bin/elasticsearch"
-
-  # Zookeeper
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper
@@ -40,10 +217,8 @@ services:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181
     networks:
-      kafka-network:
-        ipv4_address: 172.24.0.2
+      - kafka-network
 
-  # Kafka
   broker:
     image: apache/kafka:latest
     container_name: broker
@@ -63,25 +238,15 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
     networks:
-      kafka-network:
-        ipv4_address: 172.24.0.3
-
+      - kafka-network
 networks:
-  elastic-network:
+  redis-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.23.0.0/16
-
+        - subnet: 172.21.0.0/16
   kafka-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.24.0.0/16
-
-  redis-network:
-    external: true
-    name: redis-network
 
 volumes:
   esdata:
