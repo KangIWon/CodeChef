@@ -49,9 +49,9 @@ public class ChatRoom {
     }
 
     public static class ChatRoomBuilder {
-        public ChatRoomBuilder id(Long id) {
-            throw new ApiException(ErrorStatus.ID_CANNOT_BE_SET);
-        }
+//        public ChatRoomBuilder id(Long id) {
+//            throw new ApiException(ErrorStatus.ID_CANNOT_BE_SET);
+//        }
 
         public ChatRoomBuilder isDeleted(boolean isDeleted) {
             throw new ApiException(ErrorStatus.IS_DELETED_CANNOT_BE_SET);

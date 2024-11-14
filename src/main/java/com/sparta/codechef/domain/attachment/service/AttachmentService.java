@@ -193,15 +193,12 @@ public class AttachmentService {
      */
     public boolean hasAccess(AuthUser authUser, Long boardId) {
         boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
-
-        if (isAdmin) {
+        if (!isAdmin) {
             boolean isWriter = this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
-
             if (!isWriter) {
                 throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
             }
         }
-
         return true;
     }
 }

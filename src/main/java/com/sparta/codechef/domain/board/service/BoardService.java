@@ -1,6 +1,7 @@
 package com.sparta.codechef.domain.board.service;
 
 import com.sparta.codechef.common.ErrorStatus;
+import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
@@ -196,9 +197,8 @@ public class BoardService {
     public Page<BoardResponse> myCreatedBoard(AuthUser authUser,int page, int size) {
 
         Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "id"));
-        Page<Board> allById = boardRepository.findAllByUserId(authUser.getUserId(), pageable).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_USER)
-        );
+        Page<Board> allById = boardRepository.findAllByUserId(authUser.getUserId(), pageable);
+
 
         return allById.map(board -> new BoardResponse(
                 board.getId(),
@@ -223,11 +223,16 @@ public class BoardService {
     public BoardDetailResponse getBoardDetails(AuthUser authUser, Long boardId) {
         log.info("Attempting to retrieve board details with optimistic locking. Board ID: {}", boardId);
 
+//        // 비관적 락
+//        Board board = boardRepository.findByIdWithPessimisticLock(boardId)
+//                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_BOARD));
 
-        List<Comment> commentList = commentRepository.findByBoardId(boardId)
-                .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT));
+
+        List<Comment> commentList = commentRepository.findCommentByBoardId(boardId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_COMMENT)
+        );
 
         // 어뷰징 방지: 1시간 내에 중복 조회 확인
         if (canIncrementViewCount(authUser.getUserId().toString(), boardId)) {
