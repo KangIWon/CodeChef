@@ -1,0 +1,19 @@
+<!-- payment-fail.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>카드 등록 실패</title>
+</head>
+<body>
+<h1>카드 등록에 실패했습니다.</h1>
+<p>다시 시도해 주세요.</p>
+<button onclick="retry()">다시 시도하기</button>
+
+<script>
+  function retry() {
+    window.location.href = "/payment"; // 카드 등록 페이지로 이동
+  }
+</script>
+</body>
+</html>

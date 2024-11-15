@@ -33,13 +33,10 @@ spring:
   rabbitmq:
     username: ${RABBITMQ_DEFAULT_USER}
     password: ${RABBITMQ_DEFAULT_PASS}
-    erlang:
-      cookie: ${RABBITMQ_ERLANG_COOKIE}
     host: ${RABBITMQ_HOST}
     port:
       - ${RABBITMQ_PORT1}
       - ${RABBITMQ_PORT2}
-
 #위에 elasticsearch가 있는데 아래 왜 추가 되었는지 물어보기
 management:
   health:
@@ -67,6 +64,7 @@ jwt:
 web-socket:
   secret:
     key: ${WEB_SOCKET_SECRET_KEY}
+
 websocket:
   host: ${WEBSOCKET_HOST}
   port: ${WEBSOCKET_PORT}
@@ -100,3 +98,8 @@ slack:
 
 admin:
   token: ${ADMIN_TOKEN}
+
+payment:
+  toss:
+    test_client_api_key: ${TOSS_TEST_CLIENT_API_KEY}
+    test_secret_api_key: ${TOSS_TEST_SECRET_API_KEY}

@@ -15,6 +15,7 @@ public class AuthRequest {
     public static class Signup {
         private String email;
         private String password;
+        private String userName;
         private UserRole userRole;
         private String personalHistory;
 //        private String language;
