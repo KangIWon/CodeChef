@@ -18,7 +18,8 @@ public class Attachment {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String s3Url;
+    private String cdnUrl;
+
     @Column(nullable = false, unique = true)
     private String s3Key;
 

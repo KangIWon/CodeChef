@@ -9,6 +9,9 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
+import com.sparta.codechef.domain.attachment.entity.Attachment;
+import com.sparta.codechef.domain.attachment.repository.AttachmentRepository;
+import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,6 +29,7 @@ import java.util.Objects;
 public class AttachmentService {
 
     private final BoardRepository boardRepository;
+    private final AttachmentRepository attachmentRepository;
     private final AmazonS3 amazonS3;
 
     @Value("${s3.bucket}")
@@ -32,6 +37,9 @@ public class AttachmentService {
 
     @Value("${cloudfront.url}")
     private String CLOUD_FRONT_URL;
+
+    private final List<String> ALLOWED_MIME_TYPES = List.of("image/jpeg", "image/png");
+    private final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png");
 
     private final Long MAX_FILE_SIZE = 5 * 1024 * 1024L;  // 단일 파일 최대 용량 : 5MB
     private final Long MAX_REQUEST_SIZE = 10 * 1024 * 1024L;  // 전체 업로드 파일 최대 용량 : 10MB
@@ -46,7 +54,11 @@ public class AttachmentService {
         this.validateAttachmentFiles(fileList);
         this.deleteFiles(boardId);
 
-        return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
+        Board board = this.boardRepository.findById(boardId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
+        );
+
+        return fileList.stream().map(file -> this.uploadFile(board, file)).toList();
     }
 
 
@@ -62,12 +74,15 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
         };
 
-        return this.getKeyListFromS3(boardId).stream().map(key ->
-                new AttachmentResponse(
-                    this.getOriginalFileName(boardId, key),
-                    this.getCdnUrl(key)
-                )
-        ).toList();
+        List<Attachment> attachmentList = this.attachmentRepository.findAllByBoardId(boardId);
+
+        if (attachmentList != null && !attachmentList.isEmpty()) {
+            return attachmentList.stream().map(attachment ->
+                new AttachmentResponse(attachment.getId(), attachment.getS3Key(), attachment.getCdnUrl())
+            ).toList();
+        }
+
+        return new ArrayList<>();
     }
 
 
@@ -76,6 +91,9 @@ public class AttachmentService {
      * @param boardId : 게시글 ID
      */
     public void deleteFiles(Long boardId) {
+        this.attachmentRepository.findAllByBoardId(boardId)
+                .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
+
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
     }
 
@@ -99,12 +117,12 @@ public class AttachmentService {
 
     /**
      * 단일 첨부파일 업로드
-     * @param boardId : 게시글 ID
+     * @param board : 게시글 엔티티
      * @param file : 첨부파일
      * @return 첨부파일 정보(파일명, cloudFrontFileURL)
      */
-    public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
-        String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
+    public AttachmentResponse uploadFile(Board board, MultipartFile file) {
+        String s3Key = this.getS3Key(board.getId(), file.getOriginalFilename());
 
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());
@@ -117,10 +135,15 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
         }
 
-        return new AttachmentResponse(
-                file.getOriginalFilename(),
-                this.getCdnUrl(s3Key)
-        );
+        Attachment attachment = Attachment.builder()
+                .board(board)
+                .s3Key(s3Key)
+                .cdnUrl(this.getCdnUrl(s3Key))
+                .build();
+
+        Attachment savedAttachment = this.attachmentRepository.save(attachment);
+
+        return new AttachmentResponse(savedAttachment);
     }
 
     /**
@@ -211,30 +234,7 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
         }
 
-        fileList.stream()
-                .filter(Objects::nonNull)
-                .forEach(file -> {
-            if (file.getSize() > MAX_FILE_SIZE) {
-                throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
-            }
-
-            String fileName = file.getOriginalFilename();
-            if (fileName == null) {
-                throw new ApiException(ErrorStatus.ATTACHMENT_NAME_IS_NULL);
-            }
-
-            if (fileName.isBlank()) {
-                throw new ApiException(ErrorStatus.ATTACHMENT_NAME_IS_EMPTY);
-            }
-
-            if (fileName.length() > 25) {
-                throw new ApiException(ErrorStatus.FILENAME_IS_TOO_LONG);
-            }
-
-        });
-
-        long totalSize = fileList.stream().mapToLong(MultipartFile::getSize).sum();
-
+        long totalSize = fileList.stream().filter(this::validateFile).mapToLong(MultipartFile::getSize).sum();
         if (totalSize == 0) {
             throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
         }
@@ -248,5 +248,44 @@ public class AttachmentService {
         if (distinctFileNames != fileList.size()) {
             throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
         }
+    }
+
+    private boolean validateFile(MultipartFile file) {
+        if (file == null) {
+            throw new ApiException(ErrorStatus.FILE_IS_NULL);
+        }
+
+        // Mime Type 확인
+        String mimeType = file.getContentType();
+        if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
+            throw new ApiException(ErrorStatus.INVALID_MIME_TYPE);
+        }
+
+        // 개별 파일 사이즈 확인
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        // 확장자 확인
+        String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new ApiException(ErrorStatus.INVALID_EXTENSION);
+        }
+
+        if (fileName == null) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_NULL);
+        }
+
+        if (fileName.isBlank()) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_EMPTY);
+        }
+
+        if (fileName.length() > 25) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_TOO_LONG);
+        }
+
+        return true;
     }
 }

@@ -38,15 +38,18 @@ public enum ErrorStatus implements BaseCode {
     NOT_BOARD_WRITER(HttpStatus.UNAUTHORIZED, 401, "게시글 작성자가 아닙니다."),
 
     // 첨부파일 관련 예외
-    NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "중복된 이름의 첨부파일이 존재합니다."),
-    ATTACHMENT_NAME_IS_EMPTY(HttpStatus.BAD_REQUEST, 400, "첨부파일 이름은 공백이 될 수 없습니다."),
-    ATTACHMENT_NAME_IS_NULL(HttpStatus.BAD_REQUEST, 400, "첨부파일 이름이 NULL이 될 수 없습니다."),
+    NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS DUPLICATED"),
+    FILE_NAME_IS_EMPTY(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS BLANK"),
+    FILE_NAME_IS_NULL(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS NULL"),
     EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가된 첨부파일이 존재하지 않습니다."),
     MAX_UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "단일 첨부파일은 최대 5MB까지 업로드 가능합니다."),
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
     FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
     FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
-    FILENAME_IS_TOO_LONG(HttpStatus.BAD_REQUEST, 400, "첨부파일명이 너무 깁니다. 25자 이내로 줄여서 업로드 해 주십시오."),
+    FILE_NAME_IS_TOO_LONG(HttpStatus.BAD_REQUEST, 400, "첨부파일명이 너무 깁니다. 25자 이내로 줄여서 업로드 해 주십시오."),
+    INVALID_MIME_TYPE(HttpStatus.BAD_REQUEST, 400, "허용되지 않는 파일 형식입니다."),
+    INVALID_EXTENSION(HttpStatus.BAD_REQUEST, 400, "허용되지 않는 파일 확장자입니다."),
+    FILE_IS_NULL(HttpStatus.BAD_REQUEST, 400, "FILE IS NULL"),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
