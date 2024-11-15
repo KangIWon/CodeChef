@@ -187,6 +187,10 @@ jobs:
       - name: Check for .env file
         run: ls -la
 
+      - name: Validate Docker Compose File
+        run: |
+          grep -q "image:" docker-compose.elasticsearch.yml || { echo "도커 이미지가 명시되지 않았습니다."; exit 1; }
+
       - name: Copy .env and docker-compose.elasticsearch.yml to Elasticsearch EC2
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no .env docker-compose.elasticsearch.yml ${{ secrets.ELASTICSEARCH_EC2_USER }}@${{ secrets.ELASTICSEARCH_EC2_HOST }}:/home/${{ secrets.ELASTICSEARCH_EC2_USER }}
@@ -210,10 +214,13 @@ jobs:
           username: ${{ secrets.ELASTICSEARCH_EC2_USER }}
           port: 22
           script: |
-            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
-            sudo docker container stop es01 || true
-            sudo docker container prune -f
-            sudo docker image prune -a -f
-            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env config
-            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env up -d
-            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml logs
+            set -e
+            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}" || { echo "Docker 로그인 실패"; exit 1; }
+            sudo docker container stop es01 || echo "컨테이너 중지 실패 또는 이미 중지됨"
+            sudo docker container prune -f || echo "컨테이너 정리 실패"
+            sudo docker image prune -a -f || echo "이미지 정리 실패"
+            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env config || { echo "Docker Compose 구성 실패"; exit 1; }
+            sudo chown -R 1000:1000 /usr/share/elasticsearch/data || echo "볼륨 권한 설정 실패"
+            sudo chmod -R 777 /usr/share/elasticsearch/data || echo "볼륨 권한 설정 실패"
+            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env up -d || { echo "Docker Compose 실행 실패"; exit 1; }
+            curl -u "elastic:${{ secrets.ELASTIC_PASSWORD }}" http://localhost:9200 || { echo "Elasticsearch 연결 실패"; exit 1; }
