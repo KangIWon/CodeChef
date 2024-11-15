@@ -42,7 +42,10 @@ management:
   health:
     elasticsearch:
       enabled: false
-
+  endpoints:
+    web:
+      exposure:
+        include: "*"
   kafka:
     bootstrap-servers: localhost:9092  # Kafka 서버 주소
     consumer:
@@ -91,3 +94,4 @@ cloudfront:
 slack:
   webhook:
     url: ${SLACK_WEBHOOK_URL}
+
