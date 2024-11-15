@@ -124,9 +124,9 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Copy rabbitmq-compose.yml to RabbitMQ EC2
+      - name: Copy docker-compose.rabbitmq.yml to RabbitMQ EC2
         run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no rabbitmq-compose.yml ${{ secrets.RABBITMQ_EC2_USER }}@${{ secrets.RABBITMQ_EC2_HOST }}:/home/${{ secrets.RABBITMQ_EC2_USER }}
+          scp -i private_key.pem -o StrictHostKeyChecking=no docker-compose.rabbitmq.yml ${{ secrets.RABBITMQ_EC2_USER }}@${{ secrets.RABBITMQ_EC2_HOST }}:/home/${{ secrets.RABBITMQ_EC2_USER }}
 
       - name: SSH to RabbitMQ EC2 and Deploy RabbitMQ
         uses: appleboy/ssh-action@v1.1.0
@@ -140,7 +140,7 @@ jobs:
             sudo docker container stop rabbitmq || true
             sudo docker container prune -f
             sudo docker image prune -a -f
-            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/rabbitmq-compose.yml up -d
+            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml up -d
 
 
   deploy-to-elasticsearch-ec2:
@@ -158,9 +158,9 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Copy elasticsearch-compose.yml to Elasticsearch EC2
+      - name: Copy docker-compose.elasticsearch.yml to Elasticsearch EC2
         run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no elasticsearch-compose.yml ${{ secrets.ELASTICSEARCH_EC2_USER }}@${{ secrets.ELASTICSEARCH_EC2_HOST }}:/home/${{ secrets.ELASTICSEARCH_EC2_USER }}
+          scp -i private_key.pem -o StrictHostKeyChecking=no docker-compose.elasticsearch.yml ${{ secrets.ELASTICSEARCH_EC2_USER }}@${{ secrets.ELASTICSEARCH_EC2_HOST }}:/home/${{ secrets.ELASTICSEARCH_EC2_USER }}
 
       - name: SSH to Elasticsearch EC2 and Deploy Elasticsearch
         uses: appleboy/ssh-action@v1.1.0
@@ -174,4 +174,4 @@ jobs:
             sudo docker container stop es01 || true
             sudo docker container prune -f
             sudo docker image prune -a -f
-            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/elasticsearch-compose.yml up -d
+            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml up -d
