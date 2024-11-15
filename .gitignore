@@ -51,5 +51,4 @@ propertyConfig
 *.manifest
 # elasticsearch cache
 data/elasticsearch/*
-
-
+*/rabbitmq
