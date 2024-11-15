@@ -163,7 +163,6 @@ jobs:
             sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env config
             sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env up -d
 
-
   deploy-to-elasticsearch-ec2:
     runs-on: ubuntu-latest
     steps:
