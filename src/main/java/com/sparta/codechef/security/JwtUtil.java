@@ -117,26 +117,28 @@ public class JwtUtil {
         }
     }
 
-    public String createAccessToken(Long userId, String email, UserRole role) {
+    public String createAccessToken(Long userId, String email, String userName,UserRole role) {
         Date now = new Date();
         return BEARER_PREFIX + Jwts.builder()
                 .claim("category", TokenType.ACCESS.name())
                 .setExpiration(new Date(now.getTime() + TokenType.ACCESS.getLifeTime()))
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("userName",userName)
                 .claim("userRole", role.getUserRole())
                 .setIssuedAt(now)
                 .signWith(key)
                 .compact();
     }
 
-    public String createRefreshToken(Long userId, String email, UserRole role) {
+    public String createRefreshToken(Long userId, String email,String userName ,UserRole role) {
         Date now = new Date();
         return BEARER_PREFIX + Jwts.builder()
                 .claim("category", TokenType.REFRESH.name())
                 .setExpiration(new Date(now.getTime() + TokenType.REFRESH.getLifeTime()))
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("userName",userName)
                 .claim("userRole", role)
                 .setIssuedAt(now)
                 .signWith(key)
@@ -153,6 +155,7 @@ public class JwtUtil {
         return new AuthUser(
                 Long.parseLong(claims.getSubject()),
                 claims.get("email", String.class),
+                claims.get("userName", String.class),
                 UserRole.of(claims.get("userRole", String.class))
         );
     }
