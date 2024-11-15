@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # 메모리 사용량 제한
+      - ELASTIC_PASSWORD=elastic
+      - xpack.security.enabled=true
+      - network.host=0.0.0.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - elk-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    command: >
+      /bin/sh -c "if [ ! -d plugins/analysis-nori ]; then 
+      bin/elasticsearch-plugin install analysis-nori; 
+      fi; 
+      /usr/local/bin/docker-entrypoint.sh"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.0
+    container_name: logstash
+    environment:
+      - xpack.monitoring.enabled=false
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"  # 정확한 Java 메모리 옵션 전달
+    volumes:
+      - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+      - "9600:9600"  # Logstash Monitoring API
+    networks:
+      - elk-network
+    depends_on:
+      - elasticsearch
+
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=elastic
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk-network
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+
+networks:
+  elk-network:
+    driver: bridge
+
+volumes:
+  esdata:
+    name: ec2-user_esdata  # 볼륨 이름을 명시적으로 지정
+    driver: local
+  kibana-data:
+    name: ec2-user_kibana-data  # Kibana 데이터 볼륨의 이름도 지정
+    driver: local
+

@@ -13,52 +13,52 @@ jobs:
 
       - name: Set up SSH for Application EC2
         env:
-          EC2_HOST: ${{ secrets.APP_EC2_HOST }}
-          EC2_USER: ${{ secrets.APP_EC2_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.APP_SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+      - name: Create .env file from secret
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
+      - name: Verify .env presence
+        run: |
+          ls -l .env
 
-      - name: Build with Gradle
-        run: ./gradlew build
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:latest .
-
-      - name: Push the Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest
+      - name: Copy .env to Application EC2
+        env:
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "mkdir -p /home/$EC2_USER/config"
+          scp -i private_key.pem -o StrictHostKeyChecking=no .env $EC2_USER@$EC2_HOST:/home/$EC2_USER/config
 
       - name: SSH to Application EC2 and Deploy Application
         uses: appleboy/ssh-action@v1.1.0
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          host: ${{ secrets.APP_EC2_HOST }}
-          username: ${{ secrets.APP_EC2_USER }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
           port: 22
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+
             docker container stop my-app || true
             docker container rm my-app || true
             docker container prune -f
             docker image prune -a -f
-            docker pull "${{ secrets.DOCKER_USERNAME }}"/my-app:latest
+            docker system prune -a -f
+            
+            docker pull "${{ secrets.DOCKER_USERNAME }}/my-app:latest"
+            
+            echo "컨테이너가 시작될 때까지 대기 중..."
+            sleep 30
+            
             docker run -d --rm --env-file /home/ec2-user/config/.env -p 8080:8080 --name my-app "${{ secrets.DOCKER_USERNAME }}/my-app:latest"
+
 
   deploy-to-redis-ec2:
     runs-on: ubuntu-latest
@@ -100,6 +100,7 @@ jobs:
           port: 22
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+            echo "your-docker-password" | docker login -u "your-docker-username" --password-stdin
             sudo yum update -y
             # Install docker-compose
             sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -109,3 +110,117 @@ jobs:
             sudo docker container prune -f
             sudo docker image prune -a -f
             sudo docker-compose -f /home/${{ secrets.REDIS_EC2_USER }}/redis-compose.yml up -d
+
+  deploy-to-rabbitmq-ec2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH for RabbitMQ EC2
+        env:
+          EC2_HOST: ${{ secrets.RABBITMQ_EC2_HOST }}
+          EC2_USER: ${{ secrets.RABBITMQ_EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "${SSH_PRIVATE_KEY}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+      - name: Check for .env file
+        run: ls -la
+
+      - name: Copy .env and docker-compose.rabbitmq.yml to RabbitMQ EC2
+        run: |
+          scp -i private_key.pem -o StrictHostKeyChecking=no .env docker-compose.rabbitmq.yml ${{ secrets.RABBITMQ_EC2_USER }}@${{ secrets.RABBITMQ_EC2_HOST }}:/home/${{ secrets.RABBITMQ_EC2_USER }}
+
+      - name: Verify copied files on EC2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.RABBITMQ_EC2_HOST }}
+          username: ${{ secrets.RABBITMQ_EC2_USER }}
+          port: 22
+          script: |
+            cat /home/${{ secrets.RABBITMQ_EC2_USER }}/.env
+            cat /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml
+
+      - name: SSH to RabbitMQ EC2 and Deploy RabbitMQ
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.RABBITMQ_EC2_HOST }}
+          username: ${{ secrets.RABBITMQ_EC2_USER }}
+          port: 22
+          script: |
+            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+            sudo docker container stop rabbitmq || true
+            sudo docker container prune -f
+            sudo docker image prune -a -f
+            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env config
+            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env up -d
+            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml logs
+  
+
+  deploy-to-elasticsearch-ec2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH for Elasticsearch EC2
+        env:
+          EC2_HOST: ${{ secrets.ELASTICSEARCH_EC2_HOST }}
+          EC2_USER: ${{ secrets.ELASTICSEARCH_EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "${SSH_PRIVATE_KEY}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+      - name: Check for .env file
+        run: ls -la
+
+      - name: Validate Docker Compose File
+        run: |
+          grep -q "image:" docker-compose.elasticsearch.yml || { echo "도커 이미지가 명시되지 않았습니다."; exit 1; }
+
+      - name: Copy .env and docker-compose.elasticsearch.yml to Elasticsearch EC2
+        run: |
+          scp -i private_key.pem -o StrictHostKeyChecking=no .env docker-compose.elasticsearch.yml ${{ secrets.ELASTICSEARCH_EC2_USER }}@${{ secrets.ELASTICSEARCH_EC2_HOST }}:/home/${{ secrets.ELASTICSEARCH_EC2_USER }}
+
+      - name: Verify copied files on EC2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.ELASTICSEARCH_EC2_HOST }}
+          username: ${{ secrets.ELASTICSEARCH_EC2_USER }}
+          port: 22
+          script: |
+            cat /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env
+            cat /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml
+
+      - name: SSH to Elasticsearch EC2 and Deploy Elasticsearch
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.ELASTICSEARCH_EC2_HOST }}
+          username: ${{ secrets.ELASTICSEARCH_EC2_USER }}
+          port: 22
+          script: |
+            set -e
+            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}" || { echo "Docker 로그인 실패"; exit 1; }
+            sudo docker container stop es01 || echo "컨테이너 중지 실패 또는 이미 중지됨"
+            sudo docker container prune -f || echo "컨테이너 정리 실패"
+            sudo docker image prune -a -f || echo "이미지 정리 실패"
+            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env config || { echo "Docker Compose 구성 실패"; exit 1; }
+            sudo chown -R 1000:1000 /usr/share/elasticsearch/data || echo "볼륨 권한 설정 실패"
+            sudo chmod -R 777 /usr/share/elasticsearch/data || echo "볼륨 권한 설정 실패"
+            sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env up -d || { echo "Docker Compose 실행 실패"; exit 1; }
+            curl -u "elastic:${{ secrets.ELASTIC_PASSWORD }}" http://localhost:9200 || { echo "Elasticsearch 연결 실패"; exit 1; }

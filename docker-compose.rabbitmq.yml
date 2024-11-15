@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    volumes:
+      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+    ports:
+      - "${RABBITMQ_PORT1}"
+      - "${RABBITMQ_PORT2}"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_LOGS: /var/lib/rabbitmq/log/rabbit.log
+    command: >
+      sh -c "
+            rabbitmq-plugins enable rabbitmq_stomp;
+            rabbitmq-plugins enable rabbitmq_management;
+            rabbitmq-server"
