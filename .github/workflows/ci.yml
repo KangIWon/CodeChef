@@ -137,6 +137,17 @@ jobs:
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no .env docker-compose.rabbitmq.yml ${{ secrets.RABBITMQ_EC2_USER }}@${{ secrets.RABBITMQ_EC2_HOST }}:/home/${{ secrets.RABBITMQ_EC2_USER }}
 
+      - name: Verify copied files on EC2
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.RABBITMQ_EC2_HOST }}
+          username: ${{ secrets.RABBITMQ_EC2_USER }}
+          port: 22
+          script: |
+            cat /home/${{ secrets.RABBITMQ_EC2_USER }}/.env
+            cat /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml
+
       - name: SSH to RabbitMQ EC2 and Deploy RabbitMQ
         uses: appleboy/ssh-action@v1.1.0
         with:
@@ -149,7 +160,9 @@ jobs:
             sudo docker container stop rabbitmq || true
             sudo docker container prune -f
             sudo docker image prune -a -f
+            sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env config
             sudo docker-compose -f /home/${{ secrets.RABBITMQ_EC2_USER }}/docker-compose.rabbitmq.yml --env-file /home/${{ secrets.RABBITMQ_EC2_USER }}/.env up -d
+
 
   deploy-to-elasticsearch-ec2:
     runs-on: ubuntu-latest
