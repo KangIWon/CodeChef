@@ -1,5 +1,7 @@
 package com.sparta.codechef.common;
 
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
@@ -97,9 +99,23 @@ public enum ErrorStatus implements BaseCode {
     EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
     NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다."),
 
+    //결제 예외 처리
+    NOT_FOUND_PAYMENT(HttpStatus.NOT_FOUND,404 ,"유저와 관련된 결제정보를 찾지 못했습니다." ),
+    NOT_FOUND_PAYMENT_HISTORY(HttpStatus.NOT_FOUND,404 ,"유저와 관련된 결제정보를 찾지 못했습니다." ),
+    PAYMENT_CANCELED(UNPROCESSABLE_ENTITY, 422, "결제가 취소되었습니다. 다시 시도해주세요."),
+    PAYMENT_ABORTED(UNPROCESSABLE_ENTITY, 422, "결제가 실패했습니다. 결제 정보를 확인해주세요."),
+    CARD_REJECTED(UNPROCESSABLE_ENTITY, 422, "카드 정보에 문제가 있어 결제가 거절되었습니다."),
+    UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 500, "결제 중 알 수 없는 오류가 발생했습니다. 고객 지원 센터에 문의해주세요."),
+    PAYMENT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500 ,"결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
+    NOT_FOUND_BILLING_KEY(HttpStatus.NOT_FOUND,404,"빌링키를 찾지 못했습니다."),
+    BILLING_KEY_IS_NULL(UNPROCESSABLE_ENTITY, 422, "빌링키가 없습니다. 결제 수단 등록을 다시 진행해 주세요."),
+    INVALID_CUSTOMER_KEY(HttpStatus.BAD_REQUEST,400 ,"유효하지 않은 커스터머키입니다." ),
+    REFUND_REJECTED(HttpStatus.BAD_REQUEST,400,"결제일로부터 16일 이후에는 환불이 불가합니다."),
+    REFUND_CANCELED(UNPROCESSABLE_ENTITY,422 ,"환불이 취소되었습니다. 다시 시도해주세요" ),
     // 알람 관련 예외 처리
     NOT_FOUND_ALARM(HttpStatus.NOT_FOUND, 404, "유저의 알림이 존재하지 않습니다."),
     NOT_FOUND_ALARM_UNREAD(HttpStatus.NOT_FOUND, 404, "읽지 않은 알림이 존재하지 않습니다.");
+
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;

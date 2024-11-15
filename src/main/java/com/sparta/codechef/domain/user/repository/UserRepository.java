@@ -33,7 +33,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Query("UPDATE User u SET u.point = GREATEST(CAST(u.point * 0.9 AS integer), 0), u.lastAttendDate = :today WHERE u.lastAttendDate < :date")
     List<User> decreaseAutomatically(LocalDate date,LocalDate today);
 
-
     @Query("SELECT u FROM User u WHERE u.id = :userId AND u.chatRoom.id = :chatRoomId")
     Optional<User> findChatRoomUser(Long userId, Long chatRoomId);
 
@@ -48,4 +47,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserQueryDslR
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdWithPessimisticLock(@Param("id") Long id);
+
+    Optional<User> findByCustomerKey(String customerKey);
 }
