@@ -9,8 +9,8 @@ services:
       - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
       - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
     ports:
-      - ${RABBITMQ_PORT1}
-      - ${RABBITMQ_PORT2}
+      - "${RABBITMQ_PORT1}"
+      - "${RABBITMQ_PORT2}"
     environment:
       RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
