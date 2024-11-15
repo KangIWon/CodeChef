@@ -87,10 +87,13 @@ public enum ErrorStatus implements BaseCode {
     NO_USER_IN_CHATROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방에 유저가 없습니다."),
     UNAUTHORIZED_CHAT_USER(HttpStatus.UNAUTHORIZED, 401, "채팅방 접속 인증 유저 정보를 찾을 수 없습니다."),
     INVALID_CHAT_USER_ROLE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 채팅 유저 권한입니다."),
-    INVALID_MESSAGE_TYPE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 분류입니다."),
+    CHATROOM_IS_EMPTY(HttpStatus.NOT_FOUND, 404, "채팅방에 접속 중인 유저가 존재하지 않습니다."),
 
     // 메세지 관련 예외
+    INVALID_MESSAGE_TYPE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 분류입니다."),
     FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),
+    INVALID_STOMP_DESTINATION_KEY(HttpStatus.BAD_REQUEST, 400, "STOMP 프로토콜 Destination 경로 키워드가 아닙니다."),
+    INVALID_ROUTING_KEY(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 브로커의 RoutingKey 입니다."),
 
     // DB 관련 예외
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),

@@ -1,15 +1,20 @@
 package com.sparta.codechef.config.websocket;
 
-import com.sparta.codechef.domain.chat.v3_redis.entity.ChatUser;
+import com.sparta.codechef.domain.chat.v3_redisPubSub.entity.ChatUser;
 import com.sparta.codechef.security.AuthUser;
 import com.sparta.codechef.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Map;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 public class ChatHandshakeInterceptor implements HandshakeInterceptor {
@@ -18,15 +23,13 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) {
-        String token = this.extractTokenFromRequest(request);
-
-        if (token != null) {
-            AuthUser authUser = jwtUtil.validateToken(token);
-
+        AuthUser authUser = this.getAuthUserFromRequest(request);
+        if (authUser != null) {
             attributes.put("chatUser", ChatUser.fromAuthUser(authUser));  // WebSocket 세션에 사용자 정보 저장
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     @Override
@@ -34,12 +37,17 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
 
     }
 
-    private String extractTokenFromRequest(ServerHttpRequest request) {
-        String query = request.getURI().getQuery();
-
-        if (query != null && query.contains("token=")) {
-            return query.split("token=")[1];
-        }
-        return null;
+    /**
+     * ServerHttpRequest로 AuthUser Getter
+     * @param request
+     * @return
+     */
+    private AuthUser getAuthUserFromRequest(ServerHttpRequest request) {
+        URI uri = request.getURI();
+        String token = UriComponentsBuilder.fromUri(uri)
+                .build()
+                .getQueryParams()
+                .getFirst("token");
+        return jwtUtil.validateToken(token);
     }
 }

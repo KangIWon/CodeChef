@@ -12,6 +12,7 @@ services:
     ports:
       - ${RABBITMQ_PORT1}
       - ${RABBITMQ_PORT2}
+      - ${RABBITMQ_PORT3}
     environment:
       RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}

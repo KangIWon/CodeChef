@@ -1,7 +1,7 @@
 package com.sparta.codechef.config.websocket;
 
-import com.sparta.codechef.domain.chat.v3_redis.entity.ChatUser;
-import com.sparta.codechef.domain.chat.v3_redis.service.RedisChatService;
+import com.sparta.codechef.domain.chat.v3_redisPubSub.entity.ChatUser;
+import com.sparta.codechef.domain.chat.v3_redisPubSub.service.RedisPubSubService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -20,7 +20,7 @@ import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 @RequiredArgsConstructor
 public class ChatEventListener extends TextWebSocketHandler {
 
-    private final RedisChatService chatService;
+    private final RedisPubSubService chatService;
 
 
     // 웹 소켓 연결 요청 처리
