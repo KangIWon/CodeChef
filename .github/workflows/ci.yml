@@ -89,7 +89,7 @@ jobs:
 
       - name: Copy redis-compose.yml and .env to Redis EC2
         run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no .env redis-compose.yml ${{ secrets.REDIS_EC2_USER }}@${{ secrets.REDIS_EC2_HOST }}:/home/${{ secrets.REDIS_EC2_USER }}
+          scp -i private_key.pem -o StrictHostKeyChecking=no redis-compose.yml ${{ secrets.REDIS_EC2_USER }}@${{ secrets.REDIS_EC2_HOST }}:/home/${{ secrets.REDIS_EC2_USER }}
 
       - name: SSH to Redis EC2 and Deploy Redis
         uses: appleboy/ssh-action@v1.1.0
@@ -101,13 +101,14 @@ jobs:
           script: |
             docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
             sudo yum update -y
+            # Install docker-compose
             sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
+            # Start Redis using docker-compose
             sudo docker container stop redis || true
             sudo docker container prune -f
             sudo docker image prune -a -f
-            sudo docker-compose -f /home/${{ secrets.REDIS_EC2_USER }}/redis-compose.yml --env-file /home/${{ secrets.REDIS_EC2_USER }}/.env up -d
-
+            sudo docker-compose -f /home/${{ secrets.REDIS_EC2_USER }}/redis-compose.yml up -d
 
   deploy-to-rabbitmq-ec2:
     runs-on: ubuntu-latest
