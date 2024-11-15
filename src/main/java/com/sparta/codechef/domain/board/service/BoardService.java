@@ -215,7 +215,7 @@ public class BoardService {
      * @param boardId : 조회 하려는 게시물 번호
      * */
     @Retryable(
-            value = ObjectOptimisticLockingFailureException.class,
+            retryFor = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 200)
     )
