@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>카드 등록하기</title>
+  <!-- 토스페이먼츠 SDK 추가 -->
+  <script src="https://js.tosspayments.com/v2/standard"></script>
+</head>
+<body>
+<!-- 카드 등록하기 버튼 -->
+<button class="button" style="margin-top: 30px" onclick="requestBillingAuth()">카드 등록하기</button>
+<script>
+  async function requestBillingAuth() {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("인증 토큰이 없습니다. 다시 로그인해 주세요.");
+        return;
+      }
+
+      // clientKey 요청
+      const clientKeyResponse = await fetch("http://localhost:8080/api/client-key", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      // customerKey 요청
+      const paymentInfoResponse = await fetch("http://localhost:8080/api/get-customer-key", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!clientKeyResponse.ok || !paymentInfoResponse.ok) {
+        throw new Error("clientKey 또는 결제 정보를 가져오지 못했습니다.");
+      }
+
+      // clientKey와 paymentInfo 데이터 추출
+      const clientKey = await clientKeyResponse.text();
+      const paymentInfoWrapper = await paymentInfoResponse.json();
+
+      // statusCode가 200인지 확인하여 성공 여부 판단
+      if (paymentInfoWrapper.statusCode !== 200) {
+        throw new Error(paymentInfoWrapper.message || "결제 정보를 가져오는 데 실패했습니다.");
+      }
+
+      const { customerKey, customerEmail, customerName } = paymentInfoWrapper.data;
+
+      console.log("Received customerKey:", customerKey);
+      console.log("Received customerEmail:", customerEmail);
+      console.log("Received customerName:", customerName);
+
+      // TossPayments SDK 초기화
+      const tossPayments = TossPayments(clientKey);
+
+      const payment = tossPayments.payment({ customerKey });
+
+      // 결제창 열기
+
+      await payment.requestBillingAuth({
+        method: "CARD",
+        successUrl: window.location.origin + "/success",
+        failUrl: window.location.origin + "/fail",
+        customerEmail: customerEmail,
+        customerName: customerName,
+      });
+   } catch (error) {
+      console.error("에러 발생:", error);
+      alert(`결제 창을 여는 중 문제가 발생했습니다: ${error.message}`);
+    }
+  }
+</script>
+</body>
+</html>
