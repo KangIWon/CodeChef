@@ -87,7 +87,7 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Copy redis-compose.yml and .env to Redis EC2
+      - name: Copy redis-compose.yml to Redis EC2
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no redis-compose.yml ${{ secrets.REDIS_EC2_USER }}@${{ secrets.REDIS_EC2_HOST }}:/home/${{ secrets.REDIS_EC2_USER }}
 
@@ -99,12 +99,15 @@ jobs:
           username: ${{ secrets.REDIS_EC2_USER }}
           port: 22
           script: |
-            docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+            # Docker Hub 로그인
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
+            # 시스템 업데이트 및 Docker Compose 설치
             sudo yum update -y
-            # Install docker-compose
-            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
-            # Start Redis using docker-compose
+            
+            # Redis Docker Compose 실행
             sudo docker container stop redis || true
             sudo docker container prune -f
             sudo docker image prune -a -f
