@@ -5,11 +5,15 @@ import com.sparta.codechef.common.ApiResponse;
 import com.sparta.codechef.common.enums.Framework;
 import com.sparta.codechef.common.enums.Language;
 import com.sparta.codechef.domain.elastic.document.BoardDocument;
+import com.sparta.codechef.domain.elastic.dto.TopTenSearchResponse;
 import com.sparta.codechef.domain.elastic.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,4 +55,13 @@ public class SearchController {
         return ApiResponse.ok("검색 되었습니다.",searchService.searchByLanguage(language, pageable));
     }
 
+    @GetMapping("/boards/top10")
+    public ApiResponse<List<TopTenSearchResponse>> getTop10ByField(@RequestParam String field) throws IOException{
+        return ApiResponse.ok("",searchService.getTop10ByField(field));
+    }
 }
+
+
+
+
+

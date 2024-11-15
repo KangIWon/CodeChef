@@ -24,6 +24,8 @@ spring:
     username: ${ELASTIC_USERNAME}
     password: ${ELASTIC_PASSWORD}
     uris: ${ELASTIC_IP_PORT}
+
+
     # 아래 누가 추가하셨는지 물어보기
   data:
     redis:
