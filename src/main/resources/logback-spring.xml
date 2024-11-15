@@ -1,0 +1,25 @@
+<configuration>
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>localhost:5044</destination> <!-- Logstash 호스트와 포트 -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"appName":"CodeChef"}</customFields> <!-- 애플리케이션 이름 포함 -->
+        </encoder>
+    </appender>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.sparta.codechef.domain.elastic.service.SearchService" level="debug" additivity="false">
+        <appender-ref ref="LOGSTASH"/>
+    </logger>
+
+    <!-- 전체 로그는 Console에만 출력 -->
+    <root level="info">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
+
+
