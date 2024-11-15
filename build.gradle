@@ -73,6 +73,10 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 
+    //logstash
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.3'
+
+
     implementation 'org.springframework.boot:spring-boot-starter-reactor-netty:2.6.4'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
     implementation 'org.webjars:sockjs-client:1.5.1'
@@ -80,6 +84,10 @@ dependencies {
 
     runtimeOnly "io.netty:netty-resolver-dns-native-macos:4.1.94.Final:osx-aarch_64"
 
+
+}
+configurations.all {
+    exclude group: 'commons-logging', module: 'commons-logging'
 }
 
 test {
