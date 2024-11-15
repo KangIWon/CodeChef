@@ -23,12 +23,6 @@ services:
         hard: -1
     volumes:
       - esdata:/usr/share/elasticsearch/data
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-        reservations:
-          memory: 512m
     command: >
       /bin/sh -c "if [ ! -d plugins/analysis-nori ]; then 
       bin/elasticsearch-plugin install analysis-nori; 
@@ -50,12 +44,6 @@ services:
       - elk-network
     depends_on:
       - elasticsearch
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-        reservations:
-          memory: 256m
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.0
@@ -73,12 +61,6 @@ services:
       - elk-network
     volumes:
       - kibana-data:/usr/share/kibana/data
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-        reservations:
-          memory: 256m
 
 networks:
   elk-network:
