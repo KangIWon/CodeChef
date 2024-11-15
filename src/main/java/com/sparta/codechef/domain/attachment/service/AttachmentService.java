@@ -9,6 +9,9 @@ import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
+import com.sparta.codechef.domain.attachment.entity.Attachment;
+import com.sparta.codechef.domain.attachment.repository.AttachmentRepository;
+import com.sparta.codechef.domain.board.entity.Board;
 import com.sparta.codechef.domain.board.repository.BoardRepository;
 import com.sparta.codechef.security.AuthUser;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,14 +29,20 @@ import java.util.Objects;
 public class AttachmentService {
 
     private final BoardRepository boardRepository;
+    private final AttachmentRepository attachmentRepository;
     private final AmazonS3 amazonS3;
 
     @Value("${s3.bucket}")
-    private String bucketName;
+    private String S3_BUCKET;
 
     @Value("${cloudfront.url}")
-    private String cloudFrontUrl;
+    private String CLOUD_FRONT_URL;
 
+    private final List<String> ALLOWED_MIME_TYPES = List.of("image/jpeg", "image/png");
+    private final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png");
+
+    private final Long MAX_FILE_SIZE = 5 * 1024 * 1024L;  // 단일 파일 최대 용량 : 5MB
+    private final Long MAX_REQUEST_SIZE = 10 * 1024 * 1024L;  // 전체 업로드 파일 최대 용량 : 10MB
 
     /**
      * 첨부파일 추가
@@ -41,15 +51,14 @@ public class AttachmentService {
      * @return 첨부파일 정보 리스트 (파일명, URL)
      */
     public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
-        fileList = fileList.stream().filter(Objects::nonNull).filter(file -> !file.getOriginalFilename().isBlank()).toList();
+        this.validateAttachmentFiles(fileList);
+        this.deleteFiles(boardId);
 
-        if (fileList.isEmpty()) {
-            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
-        }
+        Board board = this.boardRepository.findById(boardId).orElseThrow(
+                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
+        );
 
-        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
-
-        return fileList.stream().map(file -> this.uploadFile(boardId, file)).toList();
+        return fileList.stream().map(file -> this.uploadFile(board, file)).toList();
     }
 
 
@@ -65,15 +74,15 @@ public class AttachmentService {
             throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
         };
 
-        return this.getKeyListFromS3(boardId).stream().map(key -> {
-            // CloudFront URL + / + s3 key
-            String cloudFrontFileUrl = cloudFrontUrl + "/" + key;
+        List<Attachment> attachmentList = this.attachmentRepository.findAllByBoardId(boardId);
 
-            return new AttachmentResponse(
-                    this.getOriginalFileName(boardId, key),
-                    cloudFrontFileUrl
-            );
-        }).toList();
+        if (attachmentList != null && !attachmentList.isEmpty()) {
+            return attachmentList.stream().map(attachment ->
+                new AttachmentResponse(attachment.getId(), attachment.getS3Key(), attachment.getCdnUrl())
+            ).toList();
+        }
+
+        return new ArrayList<>();
     }
 
 
@@ -82,6 +91,9 @@ public class AttachmentService {
      * @param boardId : 게시글 ID
      */
     public void deleteFiles(Long boardId) {
+        this.attachmentRepository.findAllByBoardId(boardId)
+                .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
+
         this.getKeyListFromS3(boardId).forEach(this::deleteFile);
     }
 
@@ -93,7 +105,7 @@ public class AttachmentService {
      */
     public List<String> getKeyListFromS3(Long boardId) {
         ListObjectsV2Request request = new ListObjectsV2Request()
-                .withBucketName(bucketName)
+                .withBucketName(S3_BUCKET)
                 .withPrefix(this.getPath(boardId));
 
         ListObjectsV2Result result = amazonS3.listObjectsV2(request);
@@ -105,31 +117,33 @@ public class AttachmentService {
 
     /**
      * 단일 첨부파일 업로드
-     * @param boardId : 게시글 ID
+     * @param board : 게시글 엔티티
      * @param file : 첨부파일
      * @return 첨부파일 정보(파일명, cloudFrontFileURL)
      */
-    public AttachmentResponse uploadFile(Long boardId, MultipartFile file) {
-        String s3Key = this.getS3Key(boardId, file.getOriginalFilename());
+    public AttachmentResponse uploadFile(Board board, MultipartFile file) {
+        String s3Key = this.getS3Key(board.getId(), file.getOriginalFilename());
 
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());
         metadata.setContentType(file.getContentType());
 
         try {
-            amazonS3.putObject(bucketName, s3Key, file.getInputStream(), metadata);
+            amazonS3.putObject(S3_BUCKET, s3Key, file.getInputStream(), metadata);
 
         } catch (IOException e) {
             throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
         }
 
-        String cloudFrontFileUrl = cloudFrontUrl + "/" + s3Key;
+        Attachment attachment = Attachment.builder()
+                .board(board)
+                .s3Key(s3Key)
+                .cdnUrl(this.getCdnUrl(s3Key))
+                .build();
 
-        // 4. CloudFront URL로 AttachmentResponse 생성 및 반환
-        return new AttachmentResponse(
-                file.getOriginalFilename(),
-                cloudFrontFileUrl // CloudFront URL을 반환
-        );
+        Attachment savedAttachment = this.attachmentRepository.save(attachment);
+
+        return new AttachmentResponse(savedAttachment);
     }
 
     /**
@@ -138,7 +152,7 @@ public class AttachmentService {
      */
     public void deleteFile(String key) {
         try {
-            amazonS3.deleteObject(bucketName, key);
+            amazonS3.deleteObject(S3_BUCKET, key);
         } catch (Exception e) {
             throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
         }
@@ -184,6 +198,16 @@ public class AttachmentService {
     }
 
 
+    // S3 URL 경로 CloudFront URL 변환 메서드
+    private String getCdnUrl(String key) {
+        return new StringBuffer()
+                .append(CLOUD_FRONT_URL)
+                .append("/")
+                .append(key)
+                .toString();
+    }
+
+
     // @AuthWriter 에서 사용하는 메서드
     /**
      * 게시물의 작성자 여부 조회
@@ -193,12 +217,75 @@ public class AttachmentService {
      */
     public boolean hasAccess(AuthUser authUser, Long boardId) {
         boolean isAdmin = authUser.getUserRole().equals(UserRole.ROLE_ADMIN);
+
         if (!isAdmin) {
             boolean isWriter = this.boardRepository.existsByIdAndUserId(authUser.getUserId(), boardId);
+
             if (!isWriter) {
                 throw new ApiException(ErrorStatus.NOT_BOARD_WRITER);
             }
         }
+
+        return true;
+    }
+
+    private void validateAttachmentFiles(List<MultipartFile> fileList) {
+        if (fileList.isEmpty()) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
+        long totalSize = fileList.stream().filter(this::validateFile).mapToLong(MultipartFile::getSize).sum();
+        if (totalSize == 0) {
+            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+        }
+
+        if (totalSize > MAX_REQUEST_SIZE) {
+            throw new ApiException(ErrorStatus.MAX_UPLOAD_REQUEST_SIZE_EXCEEDED);
+        }
+
+        long distinctFileNames = fileList.stream().map(MultipartFile::getOriginalFilename).distinct().count();
+
+        if (distinctFileNames != fileList.size()) {
+            throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
+        }
+    }
+
+    private boolean validateFile(MultipartFile file) {
+        if (file == null) {
+            throw new ApiException(ErrorStatus.FILE_IS_NULL);
+        }
+
+        // Mime Type 확인
+        String mimeType = file.getContentType();
+        if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
+            throw new ApiException(ErrorStatus.INVALID_MIME_TYPE);
+        }
+
+        // 개별 파일 사이즈 확인
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        // 확장자 확인
+        String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new ApiException(ErrorStatus.INVALID_EXTENSION);
+        }
+
+        if (fileName == null) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_NULL);
+        }
+
+        if (fileName.isBlank()) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_EMPTY);
+        }
+
+        if (fileName.length() > 25) {
+            throw new ApiException(ErrorStatus.FILE_NAME_IS_TOO_LONG);
+        }
+
         return true;
     }
 }

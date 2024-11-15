@@ -65,6 +65,10 @@ web-socket:
   secret:
     key: ${WEB_SOCKET_SECRET_KEY}
 
+websocket:
+  host: ${WEBSOCKET_HOST}
+  port: ${WEBSOCKET_PORT}
+
 s3:
   credentials:
     access-key: ${S3_CREDENTIALS_ACCESS_KEY}
@@ -91,6 +95,9 @@ cloudfront:
 slack:
   webhook:
     url: ${SLACK_WEBHOOK_URL}
+
+admin:
+  token: ${ADMIN_TOKEN}
 
 payment:
   toss:

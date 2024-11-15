@@ -35,7 +35,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Value("${ADMIN_TOKEN}")
+    @Value("${admin.token}")
     private String adminToken;
 
     @Transactional

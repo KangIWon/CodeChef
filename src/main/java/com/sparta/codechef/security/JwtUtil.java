@@ -33,7 +33,7 @@ public class JwtUtil {
     // Token 식별자
     public static final String BEARER_PREFIX = "Bearer ";
 
-    @Value("${JWT_SECRET_KEY}")
+    @Value("${jwt.secret.key}")
     private String secretKey;
 
     private SecretKey key;
@@ -160,11 +160,10 @@ public class JwtUtil {
         );
     }
 
-    public boolean validateToken(String token) {
+    public AuthUser validateToken(String token) {
         try {
-            Jws<Claims> claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return this.getAuthUserFromToken(token);
 
-            return true;
         } catch (SecurityException | MalformedJwtException e) {
             log.error("Invalid JWT signature, 유효하지 않는 JWT 서명 입니다.", e);
             throw new ApiException(ErrorStatus.UNAUTHORIZED_INVALID_TOKEN);

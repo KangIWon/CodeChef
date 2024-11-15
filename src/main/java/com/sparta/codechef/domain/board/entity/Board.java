@@ -38,6 +38,7 @@ public class Board extends Timestamped {
     @Column(name = "framework", nullable = false)
     private Framework framework;
 
+    @Builder.Default
     @Column(nullable = false)
     private Long viewCount = 0L;
 
