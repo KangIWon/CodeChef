@@ -81,6 +81,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .userName(request.getUserName())
                 .userRole(request.getUserRole())
                 .personalHistory(request.getPersonalHistory())
                 .organization(Organization.valueOf(request.getOrganization()))
@@ -104,8 +105,8 @@ public class AuthService {
         validatePasswordMatch(request.getPassword(), user.getPassword());
         validateAdminLogin(request, user);
 
-        String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(), user.getUserRole());
-        String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(), user.getUserRole());
+        String accessToken = jwtUtil.createAccessToken(user.getId(), user.getEmail(),user.getUserName() ,user.getUserRole());
+        String refreshToken = jwtUtil.createRefreshToken(user.getId(), user.getEmail(),user.getUserName(),user.getUserRole());
 
         saveRefreshTokenInRedis(user.getId(), refreshToken);
 
@@ -267,10 +268,11 @@ public class AuthService {
         Claims claims = jwtUtil.extractClaims(refreshToken);
         Long userId = Long.parseLong(claims.getSubject());
         String email = claims.get("email", String.class);
+        String userName = claims.get("userName", String.class);
         UserRole userRole = UserRole.of(claims.get("userRole", String.class));
 
-        String newAccessToken = jwtUtil.createAccessToken(userId, email, userRole);
-        String newRefreshToken = jwtUtil.createRefreshToken(userId, email, userRole);
+        String newAccessToken = jwtUtil.createAccessToken(userId, email,userName,userRole);
+        String newRefreshToken = jwtUtil.createRefreshToken(userId, email, userName,userRole);
 
         // 8. 새로운 리프레시 토큰을 Redis에 저장
         // TTL 새로해서
