@@ -1,53 +1,51 @@
 package com.sparta.codechef.domain.chat.v2.service;
 
+import com.sparta.codechef.domain.chat.v2.dto.UnsubscribeDTO;
 import com.sparta.codechef.domain.chat.v2.dto.response.ChatUserResponse;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import com.sparta.codechef.domain.chat.v2.entity.WSMessage;
 import com.sparta.codechef.domain.chat.v2.repository.WSChatRepository;
-import com.sparta.codechef.domain.chat.v2.repository.WSMessageRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import static com.sparta.codechef.domain.chat.v2.entity.MessageType.*;
 
 @Service
 @RequiredArgsConstructor
 public class WSMessageService {
 
     private final WSChatRepository chatRepository;
-    private final WSMessageRepository messageRepository;
-
     private static final String MESSAGE_KEY = "message";
 
 
     /**
-     * 채팅방 생성
-     * @param chatUser : 채팅방 생성 유저 정보(id, email, role)
-     * @param roomId : 채팅방 Id
+     * 채팅방 구독
+     * @param roomId : 채팅방 ID
+     * @param chatUser : 입장한 유저 (id, email, role)
      * @return
      */
-    public WSMessage createChatRoom(WSChatUser chatUser, Long roomId) {
-        ChatUserResponse sender = new ChatUserResponse(chatUser);
-        return new WSMessage(null, roomId, sender, "채팅방이 개설되었습니다.");
+    public WSMessage subscribeChatRoom(Long roomId, WSChatUser chatUser) {
+        boolean existChatRoom = this.chatRepository.existChatRoomByIdAndHostId(roomId, chatUser.getId());
+        String email = chatUser.getEmail();
+
+        if (existChatRoom) {
+            return WSMessage.getMessage(roomId, email, CREATE);
+        }
+
+        return WSMessage.getMessage(roomId, email, IN);
     }
 
 
-
     /**
-     * 채팅방 입장
+     * 이전 채팅 메세지 불러오기
      * @param roomId : 채팅방 ID
-     * @param email : 입장한 유저 이메일
      * @return
      */
-    public List<WSMessage> subscribeChatRoom(Long roomId, String email) {
-        String content = new StringBuffer(email)
-                .append("님이 채팅방에 입장하셨습니다.")
-                .toString();
-
-        List<WSMessage> messageList = this.chatRepository.getMessagesByRoomId(roomId);
-        messageList.add(new WSMessage(this.chatRepository.generateId(MESSAGE_KEY), roomId, null, content));
-        return messageList;
+    public List<WSMessage> getMessages(Long roomId) {
+        return new ArrayList<>(this.chatRepository.getMessagesByRoomId(roomId));
     }
 
     /**
@@ -58,35 +56,42 @@ public class WSMessageService {
      * @return
      */
     public WSMessage sendMessage(WSChatUser chatUser, Long roomId, String content) {
-        Long messageId = this.chatRepository.generateId(MESSAGE_KEY);
-        ChatUserResponse sender = new ChatUserResponse(chatUser);
+        WSMessage message = new WSMessage(
+                this.getMessageId(),
+                roomId,
+                new ChatUserResponse(chatUser),
+                content
+        );
 
-        WSMessage wsMessage = new WSMessage(messageId, roomId, sender, content);
-        this.chatRepository.saveMessage(wsMessage);
-
-        return wsMessage;
+        return this.chatRepository.saveMessage(message);
     }
 
     /**
      * 채팅방 퇴장(구독 취소)
-     * @param email : 유저 이메일
      * @param roomId : 채팅방 ID
+     * @param chatUser : 채팅 유저 (id, email, role)
      * @return
      */
-    public WSMessage unsubscribeChatRoom(String email, Long roomId) {
-        String content = new StringBuffer(email).append("님이 채팅방에서 퇴장하셨습니다.").toString();
-        return new WSMessage(null, roomId, null, content);
+    public List<WSMessage> unsubscribeChatRoom(Long roomId, WSChatUser chatUser, UnsubscribeDTO dto) {
+        List<WSMessage> messageList = new ArrayList<>();
+        Long nextHostId = dto.getNextHostId();
+
+        if (nextHostId == null) {
+            return messageList;
+        }
+
+        messageList.add(WSMessage.getMessage(roomId, chatUser.getEmail(), OUT));
+
+        if (dto.isSuccess()) {
+            String nextHostEmail = this.chatRepository.findEmailById(dto.getNextHostId());
+            messageList.add(WSMessage.getMessage(roomId, nextHostEmail, NEW_HOST));
+            return messageList;
+        }
+
+        return messageList;
     }
 
-
-    /**
-     * 채팅방 방장 승계
-     * @param roomId : 채팅방 ID
-     * @param hostEmail : 새로운 방장 이메일
-     * @return
-     */
-    public WSMessage seccessHost(Long roomId, String hostEmail) {
-        String content = new StringBuffer(hostEmail).append("님이 새로운 방장이 되셨습니다.").toString();
-        return new WSMessage(null, roomId, null, content);
+    private Long getMessageId() {
+        return this.chatRepository.generateId(MESSAGE_KEY);
     }
 }

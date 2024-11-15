@@ -3,12 +3,15 @@ package com.sparta.codechef.domain.chat.v2.dto.response;
 import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
-@AllArgsConstructor
+@Setter
+@NoArgsConstructor
 public class ChatUserResponse {
-    private final Long id;
-    private final String email;
+    private Long id;
+    private String email;
 
     public ChatUserResponse(WSChatUser chatUser) {
         this.id = chatUser.getId();

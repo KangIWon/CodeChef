@@ -1,7 +1,7 @@
 package com.sparta.codechef.domain.attachment.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.attachment.annotation.AuthForBoard;
+import com.sparta.codechef.common.annotation.AuthForBoard;
 import com.sparta.codechef.domain.attachment.dto.response.AttachmentResponse;
 import com.sparta.codechef.domain.attachment.service.AttachmentService;
 import lombok.RequiredArgsConstructor;

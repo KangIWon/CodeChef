@@ -1,7 +1,5 @@
 //package com.sparta.codechef.domain.chat.v2.config;
 //
-//import com.sparta.codechef.common.ErrorStatus;
-//import com.sparta.codechef.common.exception.ApiException;
 //import com.sparta.codechef.domain.chat.v2.entity.WSChatUser;
 //import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 //import lombok.RequiredArgsConstructor;
@@ -32,8 +30,11 @@
 //        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
 //        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
 //
-//        this.wsChatService.connectChatUser(chatUser);
-//        log.info("Received a new web socket connection");
+//        if (chatUser != null) {
+//            this.wsChatService.connectChatUser(chatUser);
+//        }
+//
+//
 //        log.info("WebSocket connected, sessionId : {}", sessionId);
 //    }
 //
@@ -43,7 +44,7 @@
 //    public void handleWebSocketSubscribeListener(SessionSubscribeEvent event) {
 //        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 //        String sessionId = headerAccessor.getSessionId();
-//        log.info("Disconnected a web socket connection");
+//
 //        log.info("WebSocket subscribe, sessionId : {}", sessionId);
 //    }
 //
@@ -66,11 +67,9 @@
 //        SimpAttributes simpAttributes = SimpAttributesContextHolder.currentAttributes();
 //        WSChatUser chatUser = (WSChatUser) simpAttributes.getAttribute("chatUser");
 //
-//        if (chatUser == null) {
-//            throw new ApiException(ErrorStatus.NOT_FOUND_CHAT_USER);
+//        if (chatUser != null) {
+//            this.wsChatService.disconnectChatUser(chatUser.getId());
 //        }
-//
-//        this.wsChatService.disconnectChatUser(chatUser.getId());
 //
 //        log.info("WebSocket disconnected, sessionId : {}", sessionId);
 //    }

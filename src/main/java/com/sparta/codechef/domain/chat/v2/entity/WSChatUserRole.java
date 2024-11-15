@@ -1,10 +1,12 @@
 package com.sparta.codechef.domain.chat.v2.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.enums.UserRole;
+import com.sparta.codechef.common.exception.ApiException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.common.errors.InvalidRequestException;
 
 import java.util.Arrays;
 
@@ -22,14 +24,19 @@ public enum WSChatUserRole {
         return Arrays.stream(WSChatUserRole.values())
                 .filter(userRole -> userRole.name().equalsIgnoreCase(role))
                 .findFirst()
-                .orElseThrow(() -> new InvalidRequestException("유효하지 않은 권한입니다."));
+                .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CHAT_USER_ROLE));
     }
 
     public static WSChatUserRole of(UserRole role) {
         return Arrays.stream(WSChatUserRole.values())
                 .filter(userRole -> userRole.name().equalsIgnoreCase(role.name()))
                 .findFirst()
-                .orElseThrow(() -> new InvalidRequestException("유효하지 않은 권한입니다."));
+                .orElseThrow(() -> new ApiException(ErrorStatus.INVALID_CHAT_USER_ROLE));
+    }
+
+    @JsonValue
+    public String toValue() {
+        return this.name();
     }
 
     public static class Authority {

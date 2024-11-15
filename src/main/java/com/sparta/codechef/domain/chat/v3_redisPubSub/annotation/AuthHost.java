@@ -1,4 +1,4 @@
-package com.sparta.codechef.domain.attachment.annotation;
+package com.sparta.codechef.domain.chat.v3_redisPubSub.annotation;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("@attachmentService.hasAccess(authentication.principal, #boardId)")
-public @interface AuthForBoard {
+@PreAuthorize("@redisChatRoomService.hasAccess(authentication.principal)")
+public @interface AuthHost {
 }

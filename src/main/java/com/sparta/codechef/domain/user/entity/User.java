@@ -29,6 +29,9 @@ public class User extends Timestamped {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private String userName;
+
     private String personalHistory;
 
     @Enumerated(EnumType.STRING)
@@ -52,6 +55,12 @@ public class User extends Timestamped {
     // 계정 차단 만료 시간
     @Column
     private LocalDateTime blockUntil;
+
+    @Column(name = "customer_key")
+    private String customerKey; // 토스페이먼츠 고객 키
+
+    @Builder.Default
+    private boolean isPlusUser = false;
 
     @Version
     private Long version;
@@ -126,5 +135,9 @@ public class User extends Timestamped {
              return user.getOrganization() == Organization.EMPLOYED
                 ? "employed:ranking:realTime"
                 : "unemployed:ranking:realTime";
+    }
+
+    public void saveCustomerKey(String customerKey) {
+        this.customerKey = customerKey;
     }
 }

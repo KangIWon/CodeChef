@@ -7,6 +7,7 @@ import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomCreateRequest;
 import com.sparta.codechef.domain.chat.v1.dto.request.ChatRoomRequest;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomGetResponse;
 import com.sparta.codechef.domain.chat.v1.dto.response.ChatRoomResponse;
+import com.sparta.codechef.domain.chat.v2.dto.UnsubscribeDTO;
 import com.sparta.codechef.domain.chat.v2.service.WSChatService;
 import com.sparta.codechef.security.AuthUser;
 import jakarta.validation.Valid;
@@ -48,9 +49,10 @@ public class ChatController {
     @GetMapping
     public ApiResponse<Page<ChatRoomGetResponse>> getChatRooms(
             @RequestParam(defaultValue = "1")
-            @Min(value = 1, message = "페이지 번호는 최소 1입니다.")
+            @Min(value = 1, message = "페이지 번호는 최소 1 이어야 합니다.")
             int page,
             @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 최소 1 이어야 합니다.")
             int size
     ) {
         return ApiResponse.ok(
@@ -105,16 +107,13 @@ public class ChatController {
      * @param roomId : 채팅방 ID
      */
     @DeleteMapping("/{roomId}")
-    public ApiResponse<Void> exitChatRoom(
+    public ApiResponse<UnsubscribeDTO> exitChatRoom(
             @AuthenticationPrincipal AuthUser authUser,
             @PathVariable Long roomId
     ) {
-
-        this.wsChatService.unsubscribeChatRoom(roomId, authUser.getUserId());
-
         return ApiResponse.ok(
                 "채팅방에서 퇴장하셨습니다.",
-                null
+                this.wsChatService.unsubscribeChatRoom(roomId, authUser.getUserId())
         );
     }
 }

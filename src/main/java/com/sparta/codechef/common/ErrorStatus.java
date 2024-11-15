@@ -1,5 +1,7 @@
 package com.sparta.codechef.common;
 
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
@@ -38,12 +40,18 @@ public enum ErrorStatus implements BaseCode {
     NOT_BOARD_WRITER(HttpStatus.UNAUTHORIZED, 401, "게시글 작성자가 아닙니다."),
 
     // 첨부파일 관련 예외
-    NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "중복된 이름의 첨부파일이 존재합니다."),
+    NOT_UNIQUE_FILENAME(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS DUPLICATED"),
+    FILE_NAME_IS_EMPTY(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS BLANK"),
+    FILE_NAME_IS_NULL(HttpStatus.BAD_REQUEST, 400, "FILE NAME IS NULL"),
+    EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가된 첨부파일이 존재하지 않습니다."),
     MAX_UPLOAD_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "단일 첨부파일은 최대 5MB까지 업로드 가능합니다."),
     MAX_UPLOAD_REQUEST_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 400, "전체 첨부파일 용량은 10MB까지 업로드 가능합니다."),
     FAILED_TO_UPLOAD_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 업로드를 실패하였습니다."),
     FAILED_TO_DELETE_ATTACHMENT(HttpStatus.INTERNAL_SERVER_ERROR, 500, "첨부 파일 삭제를 실패하였습니다."),
-    EMPTY_ATTACHMENT_LIST(HttpStatus.BAD_REQUEST, 400, "추가할 첨부파일 목록이 없습니다."),
+    FILE_NAME_IS_TOO_LONG(HttpStatus.BAD_REQUEST, 400, "첨부파일명이 너무 깁니다. 25자 이내로 줄여서 업로드 해 주십시오."),
+    INVALID_MIME_TYPE(HttpStatus.BAD_REQUEST, 400, "허용되지 않는 파일 형식입니다."),
+    INVALID_EXTENSION(HttpStatus.BAD_REQUEST, 400, "허용되지 않는 파일 확장자입니다."),
+    FILE_IS_NULL(HttpStatus.BAD_REQUEST, 400, "FILE IS NULL"),
 
     // 댓글 관련 예외
     NOT_THE_AUTHOR(HttpStatus.NOT_ACCEPTABLE, 406, "게시물 작성자가 아닙니다."),
@@ -63,7 +71,7 @@ public enum ErrorStatus implements BaseCode {
     ALREADY_ASSIGNED_USER_LANGUAGE(HttpStatus.CONFLICT, 409, "유저의 언어가 중복됩니다."),
     NOT_FOUND_USER_LANGUAGE(HttpStatus.NOT_FOUND,400, "유저의 프레임워크를 찾지 못했습니다."),
 
-    //
+    // json parsing
     JSON_CHANGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식으로 바꾸는 것을 실패 했습니다."),
     JSON_READ_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500,"json 형식을 읽는 것을 실패 했습니다."),
 
@@ -74,6 +82,7 @@ public enum ErrorStatus implements BaseCode {
 
     // 채팅방 관련 예외
     NOT_FOUND_CHATROOM(HttpStatus.NOT_FOUND, 404, "채팅방을 찾을 수 없습니다."),
+    FAILED_TO_CREATE_CHAT_ROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방 생성을 실패했습니다."),
     ALREADY_IN_CHATROOM(HttpStatus.CONFLICT, 409, "이미 채팅방에 접속해 있습니다."),
     ACCESS_DENIED_NOT_CORRECT_PASSWORD(HttpStatus.FORBIDDEN, 403, "잘못된 채팅방 비밀번호입니다."),
     ROOM_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, 409, "채팅방 정원이 초과되었습니다."),
@@ -82,12 +91,18 @@ public enum ErrorStatus implements BaseCode {
     NOT_FOUND_CHAT_USER(HttpStatus.NOT_FOUND, 404, "채팅에 접속되어 있지 않습니다."),
     NO_USER_IN_CHATROOM(HttpStatus.INTERNAL_SERVER_ERROR, 500, "채팅방에 유저가 없습니다."),
     UNAUTHORIZED_CHAT_USER(HttpStatus.UNAUTHORIZED, 401, "채팅방 접속 인증 유저 정보를 찾을 수 없습니다."),
+    INVALID_CHAT_USER_ROLE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 채팅 유저 권한입니다."),
+    CHATROOM_IS_EMPTY(HttpStatus.NOT_FOUND, 404, "채팅방에 접속 중인 유저가 존재하지 않습니다."),
 
     // 메세지 관련 예외
+    INVALID_MESSAGE_TYPE(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 분류입니다."),
     FAILED_TO_SEND_MESSAGE(HttpStatus.INTERNAL_SERVER_ERROR, 500, "메세지 전송을 실패하였습니다."),
+    INVALID_STOMP_DESTINATION_KEY(HttpStatus.BAD_REQUEST, 400, "STOMP 프로토콜 Destination 경로 키워드가 아닙니다."),
+    INVALID_ROUTING_KEY(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 메세지 브로커의 RoutingKey 입니다."),
 
     // DB 관련 예외
     SQL_EXCEPTION_OCCURRED(HttpStatus.INTERNAL_SERVER_ERROR, 500, "데이터베이스 작업 처리 중 예외가 발생했습니다."),
+    INVALID_REDIS_KEY(HttpStatus.BAD_REQUEST, 400, "유효하지 않은 Redis Key 입니다."),
 
     // Validation 예외
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 400, "입력값이 유효하지 않습니다."),
@@ -97,9 +112,23 @@ public enum ErrorStatus implements BaseCode {
     EVENT_END(HttpStatus.GONE, 410, "이벤트가 종료되었습니다."),
     NO_ID_OF_KEY(HttpStatus.BAD_REQUEST, 400, "해당 키의 ID가 존재하지 않습니다."),
 
+    //결제 예외 처리
+    NOT_FOUND_PAYMENT(HttpStatus.NOT_FOUND,404 ,"유저와 관련된 결제정보를 찾지 못했습니다." ),
+    NOT_FOUND_PAYMENT_HISTORY(HttpStatus.NOT_FOUND,404 ,"유저와 관련된 결제정보를 찾지 못했습니다." ),
+    PAYMENT_CANCELED(UNPROCESSABLE_ENTITY, 422, "결제가 취소되었습니다. 다시 시도해주세요."),
+    PAYMENT_ABORTED(UNPROCESSABLE_ENTITY, 422, "결제가 실패했습니다. 결제 정보를 확인해주세요."),
+    CARD_REJECTED(UNPROCESSABLE_ENTITY, 422, "카드 정보에 문제가 있어 결제가 거절되었습니다."),
+    UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 500, "결제 중 알 수 없는 오류가 발생했습니다. 고객 지원 센터에 문의해주세요."),
+    PAYMENT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,500 ,"결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
+    NOT_FOUND_BILLING_KEY(HttpStatus.NOT_FOUND,404,"빌링키를 찾지 못했습니다."),
+    BILLING_KEY_IS_NULL(UNPROCESSABLE_ENTITY, 422, "빌링키가 없습니다. 결제 수단 등록을 다시 진행해 주세요."),
+    INVALID_CUSTOMER_KEY(HttpStatus.BAD_REQUEST,400 ,"유효하지 않은 커스터머키입니다." ),
+    REFUND_REJECTED(HttpStatus.BAD_REQUEST,400,"결제일로부터 16일 이후에는 환불이 불가합니다."),
+    REFUND_CANCELED(UNPROCESSABLE_ENTITY,422 ,"환불이 취소되었습니다. 다시 시도해주세요" ),
     // 알람 관련 예외 처리
     NOT_FOUND_ALARM(HttpStatus.NOT_FOUND, 404, "유저의 알림이 존재하지 않습니다."),
     NOT_FOUND_ALARM_UNREAD(HttpStatus.NOT_FOUND, 404, "읽지 않은 알림이 존재하지 않습니다.");
+
 
     private final HttpStatus httpStatus;
     private final Integer statusCode;

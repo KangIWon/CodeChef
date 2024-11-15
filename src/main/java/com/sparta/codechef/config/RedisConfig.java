@@ -2,7 +2,7 @@ package com.sparta.codechef.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-//import com.sparta.codechef.domain.alarm.config.RedisSubscriber;
+import com.sparta.codechef.domain.chat.v3_redisPubSub.service.RedisSubscriber;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -17,12 +17,13 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Duration;
 
@@ -85,12 +86,18 @@ public class RedisConfig {
                 .build();
     }
 
-//    @Bean
-//    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory,
-//                                                                       RedisSubscriber redisSubscriber) {
-//        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-//        container.setConnectionFactory(connectionFactory);
-//        container.addMessageListener(redisSubscriber, new ChannelTopic("notifications")); // "notifications" 채널 구독
-//        return container;
-//    }
+    /* Redis Pub/Sub 설정 */
+    @Bean
+    RedisMessageListenerContainer redisMessageListenerContainer() {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(redisConnectionFactory());
+
+        return container;
+    }
+
+    // 수신할 메서드 설정
+    @Bean
+    public MessageListenerAdapter redisMessageListener(SimpMessagingTemplate template) {
+        return new MessageListenerAdapter(new RedisSubscriber(template), "onMessage");
+    }
 }

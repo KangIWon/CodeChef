@@ -1,7 +1,7 @@
 package com.sparta.codechef.domain.board.controller;
 
 import com.sparta.codechef.common.ApiResponse;
-import com.sparta.codechef.domain.attachment.annotation.AuthForBoard;
+import com.sparta.codechef.common.annotation.AuthForBoard;
 import com.sparta.codechef.domain.board.dto.request.BoardCreatedRequest;
 import com.sparta.codechef.domain.board.dto.request.BoardDetailEvent;
 import com.sparta.codechef.domain.board.dto.request.BoardModifiedRequest;
