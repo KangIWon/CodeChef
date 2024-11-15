@@ -22,8 +22,6 @@ import java.util.Map;
 public class RabbitMQChatService {
 
     private final SimpleMessageListenerContainer container;
-    private final MessageListenerAdapter messageListener;
-    private final RabbitTemplate publishTemplate;
     private final RedisChatRepository chatRepository;
     private final RabbitAdmin rabbitAdmin;
     private final DirectExchange chatDirectExchange;

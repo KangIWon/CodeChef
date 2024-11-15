@@ -36,7 +36,6 @@ import static com.sparta.codechef.domain.chat.v3_redisPubSub.enums.RedisKey.ID_M
 public class RabbitMQMessageService {
 
     private final RedisChatRepository chatRepository;
-    private final RedisChatService chatRoomService;
     private final RabbitMQChatService chatService;
     private final RabbitMQChatProducer producer;
     private final DirectExchange chatDirectExchange;
