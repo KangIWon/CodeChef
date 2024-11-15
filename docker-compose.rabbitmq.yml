@@ -15,3 +15,5 @@ services:
       RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_LOGS: /var/lib/rabbitmq/log/rabbit.log
+
