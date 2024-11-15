@@ -68,6 +68,9 @@ networks:
 
 volumes:
   esdata:
+    name: ec2-user_esdata  # 볼륨 이름을 명시적으로 지정
     driver: local
   kibana-data:
+    name: ec2-user_kibana-data  # Kibana 데이터 볼륨의 이름도 지정
     driver: local
+
