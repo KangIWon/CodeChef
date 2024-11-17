@@ -2,6 +2,7 @@ package com.sparta.codechef.domain.payment.service;
 
 import com.sparta.codechef.domain.payment.entity.BillingKey;
 import com.sparta.codechef.domain.payment.repository.BillingKeyRepository;
+import com.sparta.codechef.domain.payment.status.BillingKeyStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +27,7 @@ public class AutomaticBillingService {
 
         // 빌링키들 활성화 상태 && 빌링데이트 오늘인 것들.
         List<BillingKey> dueBillingKeys = billingKeyRepository.findByStatusAndBillingDateEquals(
-                "ACTIVE", LocalDate.now());
+                BillingKeyStatus.ACTIVE, LocalDate.now());
 
         log.info("자동 결제 대상 BillingKey 개수: {}", dueBillingKeys.size());
 
