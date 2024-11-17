@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.codechef.common.ErrorStatus;
 import com.sparta.codechef.common.exception.ApiException;
 import com.sparta.codechef.domain.payment.dto.request.CancelSubscriptionRequest;
-import com.sparta.codechef.domain.payment.repository.IdempotencyKeyRepository;
 import com.sparta.codechef.domain.payment.entity.BillingKey;
 import com.sparta.codechef.domain.payment.repository.BillingKeyRepository;
 import com.sparta.codechef.domain.payment.entity.PaymentHistory;
@@ -19,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.Getter;
@@ -30,7 +30,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,11 +50,11 @@ public class PaymentService {
     private final RestTemplate restTemplate;
     private final String secretKey;
     private final ObjectMapper objectMapper;
-    private final IdempotencyKeyRepository idempotencyKeyRepository;
     private final BillingKeyRepository billingKeyRepository;
 
     /**
      * 유저 커스터키 가져오는 로직(없으면 생성 후 -> 저장 -> 반환)
+     *
      * @param userId
      * @return 커스터머키
      */
@@ -85,6 +84,7 @@ public class PaymentService {
 
     /**
      * FailUrl로 반환시, 예외 던지는 로직
+     *
      * @param code
      * @param message
      */
@@ -109,7 +109,6 @@ public class PaymentService {
     }
 
     /**
-     *
      * @param customerKey
      * @param authKey
      * @return 빌링키
@@ -144,7 +143,8 @@ public class PaymentService {
         String customerKey = user.getCustomerKey();
 
         // Base64 인코딩
-        String encodingSecretKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
+        String encodingSecretKey = Base64.getEncoder()
+                .encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
         // 헤더 설정
         HttpHeaders headers = new HttpHeaders();
@@ -204,12 +204,13 @@ public class PaymentService {
 
     /**
      * 결제 요청 로직
+     *
      * @param userId 유저 ID
      * @param amount 결제 금액
      */
     @Transactional
     @Retryable(
-            value = { RestClientException.class, ApiException.class },
+            value = {RestClientException.class, ApiException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 2000, multiplier = 2)
     )
@@ -248,6 +249,7 @@ public class PaymentService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Basic " + encodedSecretKey);
+        headers.add("Idempotency-Key", UUID.randomUUID().toString());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // 요청 바디 설정
@@ -271,11 +273,20 @@ public class PaymentService {
             );
 
             if (responseEntity.getStatusCode() == HttpStatus.OK) {
+                HttpHeaders responseHeaders = responseEntity.getHeaders();
                 String responseBody = responseEntity.getBody();
                 if (responseBody != null) {
                     // JSON 파싱 유연성 강화
-                    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                    Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
+                    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                            false);
+                    Map<String, Object> responseMap = objectMapper.readValue(responseBody,
+                            Map.class);
+                    List<String> idempotencyKeys = responseHeaders.get("Idempotency-Key");
+                    if (idempotencyKeys != null && !idempotencyKeys.isEmpty()) {
+                        String idempotencyKey = idempotencyKeys.get(0); // 첫 번째 값 가져오기
+                        log.info("Idempotency-Key: {}", idempotencyKey);
+                        paymentHistory.updateIdempotencyKey(idempotencyKey);
+                    }
                     paymentHistory.updateFromTossApprovalResponse(responseMap);
                     LocalDateTime approveAt = paymentHistory.getApproveAt();
                     billingkey.updateScheduledDate(approveAt);
@@ -285,8 +296,10 @@ public class PaymentService {
                 // 비정상 응답 처리 (실패 응답)
                 String responseBody = responseEntity.getBody();
                 if (responseBody != null) {
-                    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                    Map<String, Object> errorResponse = objectMapper.readValue(responseBody, Map.class);
+                    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+                            false);
+                    Map<String, Object> errorResponse = objectMapper.readValue(responseBody,
+                            Map.class);
                     Map<String, Object> error = (Map<String, Object>) errorResponse.get("error");
                     String code = (String) error.get("code");
                     String message = (String) error.get("message");
@@ -312,7 +325,8 @@ public class PaymentService {
                 paymentHistory.updateFailureInfo("UNKNOWN_ERROR", "결제 요청 중 예기치 않은 오류가 발생했습니다.");
             }
             paymentHistoryRepository.save(paymentHistory);
-            logErrorCodeAndMessageByPaymentFail(e.getStatusCode().toString(), e.getResponseBodyAsString());
+            logErrorCodeAndMessageByPaymentFail(e.getStatusCode().toString(),
+                    e.getResponseBodyAsString());
             throw new ApiException(ErrorStatus.PAYMENT_FAILED);
         } catch (Exception e) {
             // 기타 예외 처리
@@ -333,14 +347,13 @@ public class PaymentService {
         PaymentHistory paymentHistory = paymentHistoryRepository.findLatestByBillingKey(billingKey)
                 .orElseThrow(() -> new ApiException(ErrorStatus.NOT_FOUND_PAYMENT_HISTORY));
 
-
         LocalDate paymentDate = paymentHistory.getApproveAt().toLocalDate();
         long daysSincePayment = ChronoUnit.DAYS.between(paymentDate, LocalDate.now());
         int refundAmount = calculateRefundAmount(paymentHistory.getAmount(), daysSincePayment);
 
         // Toss Payments API에 환불 요청 보내기
         String cancelReason = cancelSubscriptionRequest.getCancelReason();
-        String idempotencyKey = UUID.randomUUID().toString();
+        String idempotencyKey = paymentHistory.getPaymentIdempotencyKey();
         sendRefundRequest(paymentHistory, refundAmount, cancelReason, idempotencyKey);
 
         // 환불 후 결제 상태 업데이트
@@ -348,13 +361,15 @@ public class PaymentService {
         billingKey.cancelSubscription();
         paymentHistoryRepository.save(paymentHistory);
     }
-    private void sendRefundRequest(PaymentHistory paymentHistory, int cancelAmount, String cancelReason, String idempotencyKey) {
+
+    private void sendRefundRequest(PaymentHistory paymentHistory, int cancelAmount,
+            String cancelReason, String idempotencyKey) {
         String encodingSecretKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Basic " + encodingSecretKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.add("Idempotency-Key", idempotencyKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new HashMap<>();
         body.put("cancelReason", cancelReason);
@@ -364,7 +379,8 @@ public class PaymentService {
 
         try {
             ResponseEntity<Map> responseEntity = restTemplate.postForEntity(
-                    "https://api.tosspayments.com/v1/payments/" + paymentHistory.getPaymentKey() + "/cancel",
+                    "https://api.tosspayments.com/v1/payments/" + paymentHistory.getPaymentKey()
+                            + "/cancel",
                     requestEntity,
                     Map.class
             );

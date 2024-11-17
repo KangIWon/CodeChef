@@ -8,7 +8,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,7 +29,7 @@ public class PaymentHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(unique = true)
     private String orderId;
     @Column
     private int amount;
@@ -50,6 +49,8 @@ public class PaymentHistory {
     private String paymentKey;
     @Column
     private String currency;
+    @Column (unique = true)
+    private String paymentIdempotencyKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "billing_key_id")
@@ -90,6 +91,9 @@ public class PaymentHistory {
 
     public void updateStatus(String canceled, Object o, Object o1) {
         this.status = "CANCELED";
+    }
 
+    public void updateIdempotencyKey(String idempotencyKey) {
+        this.paymentIdempotencyKey = idempotencyKey;
     }
 }
