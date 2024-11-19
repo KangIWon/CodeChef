@@ -10,7 +10,6 @@ services:
       - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
       - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
       - ./rabbitmq_init.sh:/etc/rabbitmq/init.sh
-      - ./.docker/rabbitmq/etc/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
 
 
     ports:

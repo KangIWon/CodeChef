@@ -1,15 +1,5 @@
 #!/bin/bash
 
-# rabbitmq.conf 파일 경로 설정
-RABBITMQ_CONF_FILE="/etc/rabbitmq/rabbitmq.conf"
-
-# AMQP 포트 설정 (기본값 5672)
-echo "listeners.tcp.default = 5672" >> $RABBITMQ_CONF_FILE
-# RabbitMQ 관리 UI 포트 설정 (기본값 15672)
-echo "management.listener.port = 15672" >> $RABBITMQ_CONF_FILE
-# STOMP 포트 설정 (기본값 61613)
-echo "stomp.listeners.tcp.default = 61613" >> $RABBITMQ_CONF_FILE
-
 # Copy Erlang cookie
 cp /var/lib/rabbitmq/.erlang.cookie /var/lib/rabbitmq/.erlang.cookie
 chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie
