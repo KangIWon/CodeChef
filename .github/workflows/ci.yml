@@ -224,4 +224,3 @@ jobs:
             sudo chmod -R 777 /usr/share/elasticsearch/data || echo "볼륨 권한 설정 실패"
             sudo docker-compose -f /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/docker-compose.elasticsearch.yml --env-file /home/${{ secrets.ELASTICSEARCH_EC2_USER }}/.env up -d || { echo "Docker Compose 실행 실패"; exit 1; }
             curl -u "elastic:${{ secrets.ELASTIC_PASSWORD }}" http://localhost:9200 || { echo "Elasticsearch 연결 실패"; exit 1; }
-            
