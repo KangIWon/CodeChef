@@ -19,9 +19,31 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtUtil jwtUtil;
 
+    @Value("${websocket.host}")
+    private String host;
+    @Value("${websocket.port}")
+    private int port;
+    @Value("${spring.rabbitmq.client.username}")
+    private String clientUsername;
+    @Value("${spring.rabbitmq.client.password}")
+    private String clientPassword;
+    @Value("${spring.rabbitmq.system.username}")
+    private String systemUsername;
+    @Value("${spring.rabbitmq.system.password}")
+    private String systemPassword;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/queue");  // 구독 경로
+        registry.enableStompBrokerRelay("/topic", "/queue")
+                .setRelayPort(port)
+                .setRelayHost(host)
+                .setSystemLogin(systemUsername)
+                .setSystemPasscode(systemPassword)
+                .setClientLogin(clientUsername)
+                .setClientPasscode(clientPassword)
+                .setVirtualHost("/")
+                .setAutoStartup(true);
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app"); // 송신 경로
         registry.setPreservePublishOrder(true);
     }

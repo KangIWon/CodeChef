@@ -8,16 +8,20 @@ services:
       - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
       - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
       - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+      - ./rabbitmq_init.sh:/etc/rabbitmq/init.sh
+      - ./.docker/rabbitmq/etc/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+
+
     ports:
       - "${RABBITMQ_PORT1}"
       - "${RABBITMQ_PORT2}"
+      - "${RABBITMQ_PORT3}"
     environment:
       RABBITMQ_ERLANG_COOKIE: "RabbitMQ-${APP}"
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_SYSTEM_USER: ${RABBITMQ_SYSTEM_USER}
+      RABBITMQ_SYSTEM_PASS: ${RABBITMQ_SYSTEM_PASS}
+      RABBITMQ_CLIENT_USER: ${RABBITMQ_CLIENT_USER}
+      RABBITMQ_CLIENT_PASS: ${RABBITMQ_CLIENT_PASS}
       RABBITMQ_LOGS: /var/lib/rabbitmq/log/rabbit.log
     command: >
-      sh -c "
-            rabbitmq-plugins enable rabbitmq_stomp;
-            rabbitmq-plugins enable rabbitmq_management;
-            rabbitmq-server"
+      bash -c "/etc/rabbitmq/init.sh && rabbitmq-server"
