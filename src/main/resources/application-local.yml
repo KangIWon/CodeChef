@@ -105,3 +105,9 @@ admin:
 payment:
   toss:
     test_client_api_key: ${TOSS_TEST_CLIENT_API_KEY}
+server:
+  port: 8443 # HTTPS 기본 포트
+  ssl:
+    key-store: classpath:baeldung.p12
+    key-store-password: 123456789
+    key-store-type: PKCS12
