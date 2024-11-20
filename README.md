@@ -133,13 +133,13 @@ Board 엔티티에 @Index 어노테이션을 설정하여, 기본 인덱스를 �
 
 하지만 애플리케이션 실행 중, 오류가 발생하였는데, MYSQL의 InnoDB는 인덱스의 최대 크기를 3072byte로 제한을 한다.
 
-![image (10).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/8251d72c-558a-43e1-b660-96ec78c53aad/image_(10).png)
+![](assets/images/index/entity.png)
 
 Board 엔티티의 title과 contents를 중심으로 검색하려고 하면, 4 * 2200 즉 8800바이트가 발생한다.
 
 그래서 우리는 기본 인덱스를 사용하지 않고, 이를 해결해줄 수 있는 부분 인덱스를 사용하기로 한다.
 
-![image (11).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/1fa61fde-bcf2-4ece-8c2e-9a7f3caaca3f/image_(11).png)
+![](assets/images/index/createPartialIndex.png)
 
 애플리케이션을 실행할 때 Local에서 CREATE INDEX boards_title_contents_partial_index ON boards (title(50), contents(200))”; 쿼리를 실행한다.
 
@@ -147,23 +147,23 @@ Board 엔티티의 title과 contents를 중심으로 검색하려고 하면, 4 *
 
 그래서 인덱스를 부분으로 걸어 인덱스의 크기를 줄이고 저장 공간을 절약한다.
 
-![image (12).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/48c1004d-9806-49ac-aad1-e3f80f38274b/image_(12).png)
+![](assets/images/index/checkIndex.png)
 
 인덱싱이 정상적으로 등록됐다.
 
-![image (13).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/37ef8eb4-1744-4640-a682-51ba2b10f535/image_(13).png)
+![](assets/images/index/jmeter_index_output.png)
 
 10만개의 더미 데이터를 넣고 조회를 100번 하여 성능 비교를 했는데 놀랍게도 차이가 없다.
 
-![image (14).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/8ef84058-4d67-423c-9b4e-89c456712558/image_(14).png)
+![](assets/images/index/old_query.png)
 
 확인 해보니 LIKE문에서 인덱스을 걸려면 CONCAT문과 함께 사용해야 한다.
 
-![image (15).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/ca60842f-18f6-4cd8-98b3-169f5c656c38/image_(15).png)
+![](assets/images/index/new_query.png)
 
 코드를 이렇게 수정하면 인덱스가 적용 된다.
 
-![image (16).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/83c75a39-3aba-4ba4-a792-7aefe4b07895/d02dcf13-f96e-4ea7-98a0-043742de6d5a/image_(16).png)
+![](assets/images/index/range.png)
 
 type = range로 boardSearch 쿼리 인덱싱 적용 완료 확인
 
@@ -176,12 +176,7 @@ type = range로 boardSearch 쿼리 인덱싱 적용 완료 확인
 | DB | 54 | 18.4/sec | 1.17 | 53 | 62 |
 
 인덱싱을 적용한 쿼리가 이전 쿼리에 비해 약 30%의 빠른 평균 응답 속도와 처리량을 보인다.
-
-
-
-
-
-
+</details>
 ---
 
 ## 역할 분담 및 협업 방식
