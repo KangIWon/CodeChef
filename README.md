@@ -282,6 +282,8 @@ Docker 이미지를 저장할 레지스트리로 Docker Hub를 선택하는 경�
 <img width="817" alt="스크린샷 2024-11-14 오전 10 13 52" src="https://github.com/user-attachments/assets/8d51c968-96ed-44b5-9487-f4b43b992070">
 </details>
 
+---
+
 ## 역할 분담 및 협업 방식
 
 ### **Detail Role**
