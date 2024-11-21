@@ -572,6 +572,26 @@ public void handleViewCountIncrement(BoardDetailEvent event) {
 <details>
 <summary><b>🍁 데이터 수호자들 :  동시성 이슈와의 싸움에서 살아남기</b></summary>
 
+![스레드오버타임](https://github.com/user-attachments/assets/e0db6f8e-a521-4f53-9003-1f14ab2f970f)
+
+![응답시간](https://github.com/user-attachments/assets/aa15ee1e-78a8-44d8-83f1-0302d8a76ed4)
+
+![트랜잭션시간](https://github.com/user-attachments/assets/dc1efc4f-e37c-4f2f-a57f-0d4f35e779f4)
+
+![요약 보고서](https://github.com/user-attachments/assets/8d1f7098-3e26-4755-8135-08a56fd86b3d)
+
+![포인트](https://github.com/user-attachments/assets/1947c47f-1a57-417f-ae42-1bbd742bc76e)
+
+![스레드시간](https://github.com/user-attachments/assets/0970ac5f-8a64-4c53-acd1-ba7007ba6839)
+
+![응답시간](https://github.com/user-attachments/assets/5bfd8063-5ea0-4f4f-ab9f-8e53cdadb684)
+
+![트랜잭션시간](https://github.com/user-attachments/assets/59421fb4-19cd-4f4f-b3c5-74009384d6e8)
+
+![요약보고서](https://github.com/user-attachments/assets/6fc48e0b-8e31-469a-91fd-8fb7e51708c1)
+
+![포인트](https://github.com/user-attachments/assets/f9014bf9-c2be-4f25-857e-fc564845972e)
+
    ### 동시성 제어 방식의 발전 과정 및 성능 분석
 
 이번 성능 테스트는 **DB 바로 저장** 방식에서 시작하여 **낙관적 락, 비관적 락, Lua 스크립트, 분산 락**으로 발전하는 과정을 통해, 각 방식이 가진 성능적 특징과 개선 효과를 평가했습니다. 각 방식의 성능을 측정한 결과는 다음과 같습니다.
