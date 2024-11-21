@@ -1507,16 +1507,23 @@ implementation 'org.webjars:stomp-websocket:2.3.3' // STOMP 클라이언트
 
 # 📺 의사 결정 및 트러블 슈팅
 
-https://youtu.be/vCQgVDShqlI
+<a href="https://youtu.be/vCQgVDShqlI" target="_blank">
+    <img src="https://github.com/user-attachments/assets/fc1f13ef-c93b-4689-8fd9-f17b7b31af7c" alt="Redis Pub/Sub 도입 의사결정 과정 및 트러블 슈팅" style="width:300px; height:auto;">
+</a>
+
+<br>
 
 - 메세지 브로커 : **Redis Pub/Sub**
     
-    [왜 메세지 브로커를 Redis Pub/Sub으로 변경하였나요?](https://www.notion.so/Redis-Pub-Sub-139d82ce48568034b00bf527cdc01ce8?pvs=21) 
+  > ❓ [왜 메세지 브로커를 Redis Pub/Sub으로 변경하였나요?](https://www.notion.so/Redis-Pub-Sub-139d82ce48568034b00bf527cdc01ce8?pvs=21) 
     
+<br>
 
 # 🥏 서비스 흐름도
 
-![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a2ba4954-d60f-4116-91c6-2362e2860e3f/6e69fbe4-d354-4063-bfef-3852fc4efafa/image.png)
+<img src="https://github.com/user-attachments/assets/60141397-7ad3-4c58-b78c-cefd48e37771" alt="Redis Pub/Sub 도입 의사결정 과정 및 트러블 슈팅" style="width:100%; height:auto; margin:20px auto;">
+
+<br><br>
 
 # 🌱 구현 과정
 
@@ -1529,10 +1536,10 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 ### WebSocketConfig
 
 > 기존과 동일
-> 
-- WebSockerConfig 코드 : 구독, 송신 경로 설정, STOMP 엔드포인트 설정 등
+
+<details>
+  <summary>WebSockerConfig 코드 : 구독, 송신 경로 설정, STOMP 엔드포인트 설정 등</summary>
     
-    ```java
     @Configuration
     @RequiredArgsConstructor
     @EnableWebSocketMessageBroker
@@ -1554,206 +1561,217 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
                     .setAllowedOriginPatterns("*");
         }
     }
-    ```
-    
+
+ </details>
+    <br>
 
 ### Redis Pub/Sub에서 구독 경로로 메세지 발행 감지 및 메세지 전송 과정
 
 1. **`RedisMessageListenerContainer` 생성 및 설정**
+   
     - Redis 서버와의 연결을 통해 특정 채널에 대한 구독을 설정
     - Redis에서 발생하는 Pub/Sub 이벤트를 비동기적으로 감지하고 처리
     - 구독할 채널과 메세지를 처리할 `MessageListenterAdapter` 를 설정
-    - RedisConfig 코드 : 컨테이너, 리스너 Bean 등록
+    
+       <details>
+           <summary>RedisConfig 코드 : 컨테이너, 리스너 Bean 등록</summary>
         
-        ```java
-        @Configuration
-        public class RedisConfig {
+              @Configuration
+              public class RedisConfig {
+              
+                  @Value("${REDIS_HOST_NAME}")
+                  private String localhost;
+              
+                  @Bean
+                  public RedisConnectionFactory redisConnectionFactory(){
+                      RedisSentinelConfiguration redisSentinelConfiguration = new RedisSentinelConfiguration()
+                              .master("mymaster")
+                              .sentinel(localhost, 26379)
+                              .sentinel(localhost, 26380)
+                              .sentinel(localhost, 26381);
+              
+                      return new LettuceConnectionFactory(redisSentinelConfiguration);
+                  }
+              
+                  @Bean
+                  public RedisTemplate<String, Object> redisTemplate(){
+                      RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+                      redisTemplate.setConnectionFactory(redisConnectionFactory());
+                      redisTemplate.setKeySerializer(new StringRedisSerializer());
+                      redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+                      redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+                      redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+                      return redisTemplate;
+                  }
+              
+                  /* Redis Pub/Sub 설정 */
+                  @Bean
+                  RedisMessageListenerContainer container() {
+                      RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+                      container.setConnectionFactory(redisConnectionFactory());
+              
+                      return container;
+                  }
+              
+                  // 수신할 메서드 설정
+                  @Bean
+                  public MessageListenerAdapter messageListener(SimpMessagingTemplate template) {
+                      return new MessageListenerAdapter(new RedisSubscriber(template), "onMessage");
+                  }
+              }
+
+        </details>
         
-            @Value("${REDIS_HOST_NAME}")
-            private String localhost;
-        
-            @Bean
-            public RedisConnectionFactory redisConnectionFactory(){
-                RedisSentinelConfiguration redisSentinelConfiguration = new RedisSentinelConfiguration()
-                        .master("mymaster")
-                        .sentinel(localhost, 26379)
-                        .sentinel(localhost, 26380)
-                        .sentinel(localhost, 26381);
-        
-                return new LettuceConnectionFactory(redisSentinelConfiguration);
-            }
-        
-            @Bean
-            public RedisTemplate<String, Object> redisTemplate(){
-                RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-                redisTemplate.setConnectionFactory(redisConnectionFactory());
-                redisTemplate.setKeySerializer(new StringRedisSerializer());
-                redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-                redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-                redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-                return redisTemplate;
-            }
-        
-            /* Redis Pub/Sub 설정 */
-            @Bean
-            RedisMessageListenerContainer container() {
-                RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-                container.setConnectionFactory(redisConnectionFactory());
-        
-                return container;
-            }
-        
-            // 수신할 메서드 설정
-            @Bean
-            public MessageListenerAdapter messageListener(SimpMessagingTemplate template) {
-                return new MessageListenerAdapter(new RedisSubscriber(template), "onMessage");
-            }
-        }
-        ```
-        
-2. **RedisMessageListenerContainer의 비동기 구독 시작**
+3. **RedisMessageListenerContainer의 비동기 구독 시작**
+   
     - 애플리케이션 시작과 함께 Redis 서버와 연결되어 구독을 시작
     - 지정된 채널에 메세지가 발행될 때까지 대기
     - Redis Pub/Sub 방식으로 인해, 발행된 메세지는 구독 중인 모든 서버에 비동기적으로 전달
-    - RedisChatService 코드 : 컨테이너에 채널 추가/제거
+    
+       <details>
+           <summary>RedisChatService 코드 : 컨테이너에 채널 추가/제거</summary>
         
-        ```java
-        @Service
-        @RequiredArgsConstructor
-        public class RedisChatService {
-            private final RedisMessageListenerContainer container;
-            private final MessageListenerAdapter messageListener;
-            private final RedisChatRepository chatRepository;
+              @Service
+              @RequiredArgsConstructor
+              public class RedisChatService {
+                  private final RedisMessageListenerContainer container;
+                  private final MessageListenerAdapter messageListener;
+                  private final RedisChatRepository chatRepository;
+              
+                  /**
+                   * 컨테이너에 주제(topic) 추가
+                   * @param topic : 추가할 주제(topic)
+                   */
+                  public void addTopic(ChannelTopic topic) {
+                      container.addMessageListener(messageListener, topic);
+                  }
+              
+                  /**
+                   * 컨테이너에서 주제(topic) 삭제
+                   * @param topic : 삭제할 주제(topic)
+                   */
+                  public void removeTopic(ChannelTopic topic) {
+                      container.removeMessageListener(messageListener, topic);
+                  }
+              
+              }
+      
+      </details>
         
-            /**
-             * 컨테이너에 주제(topic) 추가
-             * @param topic : 추가할 주제(topic)
-             */
-            public void addTopic(ChannelTopic topic) {
-                container.addMessageListener(messageListener, topic);
-            }
-        
-            /**
-             * 컨테이너에서 주제(topic) 삭제
-             * @param topic : 삭제할 주제(topic)
-             */
-            public void removeTopic(ChannelTopic topic) {
-                container.removeMessageListener(messageListener, topic);
-            }
-        
-        }
-        ```
-        
-3. **메세지 발행과 감지(`RedisPublishser`)**
+4. **메세지 발행과 감지(`RedisPublishser`)**
+   
     - 클라이언트나 서버에서 Redis에 메세지 발행
         - **트러블 슈팅**
-            - [채팅방 입장 유저 메세지 불러오기 기능 구현](https://www.notion.so/137d82ce485680c0bc8fe6cb1a20ee67?pvs=21)
-            - [데이터 불러오기 구독 경로와 `@SubscribeMapping` 경로 불일치 문제](https://www.notion.so/SubscribeMapping-13bd82ce485680938203c2d1660506e6?pvs=21)
-        - RedisMessageService 코드
+            - 💥 [채팅방 입장 유저 메세지 불러오기 기능 구현](https://www.notion.so/137d82ce485680c0bc8fe6cb1a20ee67?pvs=21)
+            - 💥 [데이터 불러오기 구독 경로와 `@SubscribeMapping` 경로 불일치 문제](https://www.notion.so/SubscribeMapping-13bd82ce485680938203c2d1660506e6?pvs=21)
+        
+        <details>
+           <summary>RedisMessageService 코드</summary>
             
-            ```java
-            @Service
-            @RequiredArgsConstructor
-            public class RedisMessageService {
-            
-                private final RedisChatRepository chatRepository;
-                private final RedisChatService chatService;
-                private final RedisPublisher redisPublisher;
-                private final ObjectMapper objectMapper = new ObjectMapper();
-            
-                /**
-                 * 이전 메세지 로드
-                 * @param roomId : 채팅방 ID
-                 * @param userId : 유저 ID
-                 */
-                public void getMessages(Long roomId, Long userId) {
-                    ChannelTopic initTopic = this.chatService.getInitTopic(userId);
-                    List<MessageGetResponse> messageList = this.chatRepository.findAllMessageGetResponseById(roomId);
-                    if (messageList.isEmpty()) {
-                        return;
-                    }
-            
-                    messageList.stream()
-                            .filter(Objects::nonNull)
-                            .forEach(message -> this.redisPublisher.publish(initTopic, message));
-                }
-                
-                /**
-                 * 채팅방 입장(구독)
-                 * @param roomId : 채팅방 ID
-                 * @param chatUser : 채팅방 입장 유저
-                 */
-                public void subscribeChatRoom(Long roomId, ChatUser chatUser) {
-                    Long hostId = this.chatRepository.findChatRoomByIDAndGetHostId(roomId);
-            
-                    if (hostId == null) {
-                        throw new ApiException(ErrorStatus.NOT_FOUND_CHATROOM);
-                    }
-            
-                    ChannelTopic topic = this.chatService.getTopic(roomId);
-                    String email = chatUser.getEmail();
-            
-                    if (Objects.equals(hostId, chatUser.getId())) {
-                        this.chatService.addTopic(topic);
-            
-                        Message message = Message.getMessage(
-                                this.chatRepository.generateId(ID_MESSAGE),
-                                CREATE,
-                                roomId,
-                                email
-                        );
-            
-                        MessageDto savedMessage = this.chatRepository.saveMessage(message);
-                        this.redisPublisher.publish(topic, new MessageGetResponse(savedMessage));
-                        return;
-                    }
-            
-                    Message message = Message.getMessage(
-                            this.chatRepository.generateId(ID_MESSAGE),
-                            IN,
-                            roomId,
-                            email
-                    );
-            
-                    MessageDto savedMessage = this.chatRepository.saveMessage(message);
-                    this.redisPublisher.publish(topic, new MessageGetResponse(savedMessage));
-                }
-            
-                /**
-                 * 채팅 메세지 전송
-                 * @param chatUser : 메세지 전송 유저
-                 * @param roomId : 채팅방 ID
-                 * @param content : 전송할 메세지 문자열
-                 */
-                public void sendMessage(ChatUser chatUser, Long roomId, String content) {
-                    try {
-                        JsonNode node = objectMapper.readTree(content);
-                        content = node.get("content").asText();
-            
-                        Message message = Message.getMessage(
-                                this.chatRepository.generateId(ID_MESSAGE),
-                                roomId,
-                                chatUser,
-                                content
-                        );
-            
-                        ChannelTopic topic = this.chatService.getTopic(roomId);
-            
-                        MessageDto messageDto = this.chatRepository.saveMessage(message);
-                        this.redisPublisher.publish(topic, new MessageGetResponse(messageDto));
-                    } catch (JsonProcessingException e) {
-                        throw new ApiException(ErrorStatus.JSON_READ_FAILED);
-                    }
-                }
-                
-                // 채팅방 퇴장 메서드 생략
-            }
-            ```
+               @Service
+               @RequiredArgsConstructor
+               public class RedisMessageService {
+               
+                   private final RedisChatRepository chatRepository;
+                   private final RedisChatService chatService;
+                   private final RedisPublisher redisPublisher;
+                   private final ObjectMapper objectMapper = new ObjectMapper();
+               
+                   /**
+                    * 이전 메세지 로드
+                    * @param roomId : 채팅방 ID
+                    * @param userId : 유저 ID
+                    */
+                   public void getMessages(Long roomId, Long userId) {
+                       ChannelTopic initTopic = this.chatService.getInitTopic(userId);
+                       List<MessageGetResponse> messageList = this.chatRepository.findAllMessageGetResponseById(roomId);
+                       if (messageList.isEmpty()) {
+                           return;
+                       }
+               
+                       messageList.stream()
+                               .filter(Objects::nonNull)
+                               .forEach(message -> this.redisPublisher.publish(initTopic, message));
+                   }
+                   
+                   /**
+                    * 채팅방 입장(구독)
+                    * @param roomId : 채팅방 ID
+                    * @param chatUser : 채팅방 입장 유저
+                    */
+                   public void subscribeChatRoom(Long roomId, ChatUser chatUser) {
+                       Long hostId = this.chatRepository.findChatRoomByIDAndGetHostId(roomId);
+               
+                       if (hostId == null) {
+                           throw new ApiException(ErrorStatus.NOT_FOUND_CHATROOM);
+                       }
+               
+                       ChannelTopic topic = this.chatService.getTopic(roomId);
+                       String email = chatUser.getEmail();
+               
+                       if (Objects.equals(hostId, chatUser.getId())) {
+                           this.chatService.addTopic(topic);
+               
+                           Message message = Message.getMessage(
+                                   this.chatRepository.generateId(ID_MESSAGE),
+                                   CREATE,
+                                   roomId,
+                                   email
+                           );
+               
+                           MessageDto savedMessage = this.chatRepository.saveMessage(message);
+                           this.redisPublisher.publish(topic, new MessageGetResponse(savedMessage));
+                           return;
+                       }
+               
+                       Message message = Message.getMessage(
+                               this.chatRepository.generateId(ID_MESSAGE),
+                               IN,
+                               roomId,
+                               email
+                       );
+               
+                       MessageDto savedMessage = this.chatRepository.saveMessage(message);
+                       this.redisPublisher.publish(topic, new MessageGetResponse(savedMessage));
+                   }
+               
+                   /**
+                    * 채팅 메세지 전송
+                    * @param chatUser : 메세지 전송 유저
+                    * @param roomId : 채팅방 ID
+                    * @param content : 전송할 메세지 문자열
+                    */
+                   public void sendMessage(ChatUser chatUser, Long roomId, String content) {
+                       try {
+                           JsonNode node = objectMapper.readTree(content);
+                           content = node.get("content").asText();
+               
+                           Message message = Message.getMessage(
+                                   this.chatRepository.generateId(ID_MESSAGE),
+                                   roomId,
+                                   chatUser,
+                                   content
+                           );
+               
+                           ChannelTopic topic = this.chatService.getTopic(roomId);
+               
+                           MessageDto messageDto = this.chatRepository.saveMessage(message);
+                           this.redisPublisher.publish(topic, new MessageGetResponse(messageDto));
+                       } catch (JsonProcessingException e) {
+                           throw new ApiException(ErrorStatus.JSON_READ_FAILED);
+                       }
+                   }
+                   
+                   // 채팅방 퇴장 메서드 생략
+               }
+      
+         </details>
             
     - 발행된 메세지는 해당 채널에 게시
-        - RedisPublisher 코드
+      
+        <details>
+           <summary>RedisPublisher 코드</summary>
             
-            ```java
             @Service
             @RequiredArgsConstructor
             public class RedisPublisher {
@@ -1779,314 +1797,292 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
                     );
                 }
             }
-            ```
+           
+      </details>
             
     - Redis 서버는 해당 채널을 구독 중인 모든 `RedisMessageListenerContainer` 에 메세지를 전송
-4. **메세지 수신 및 처리(`RedisSubscriber`)**
+      
+5. **메세지 수신 및 처리(`RedisSubscriber`)**
+   
     - `RedismessageListenerContainer` : 메세지가 발행되면 이를 감지
     - `MessageListenerAdapter` : `RedisSubscriber` 의 `onMessage` 메서드 호출 및 메세지 처리
     - `onMessage` 메서드 : `Message` 객체를 인자로 받아 Redis에서 수신한 메세지 처리
     - 메세지를 웹소켓 구독자들에게 전달
-    - RedisSubscriber 코드
-        
-        ```java
-        @Service
-        @RequiredArgsConstructor
-        public class RedisSubscriber implements MessageListener {
-        
-            private final SimpMessagingTemplate messagingTemplate;
-        
-            @Override
-            public void onMessage(Message message, byte[] pattern) {
-                String destination = new String(message.getChannel());
-                String payload = new String(message.getBody());
-        
-                this.messagingTemplate.convertAndSend(destination, payload);
-            }
-        }
-        ```
-        
-
----
-
-![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a2ba4954-d60f-4116-91c6-2362e2860e3f/b77efb49-c792-4710-ab12-a20bf0b71ebe/image.png)
-
-![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/a2ba4954-d60f-4116-91c6-2362e2860e3f/7db702d0-2e53-4c3a-ac20-f423ce484d76/image.png)
-
-### 현재 클라이언트의 실시간 채팅 이용 구조
-
-Redis를 앱 서버에 내장하여 Redis Pub/Sub을 사용하는 구조로 구현되어 있습니다.
-
-따라서 서버 간의 메세지 동기화가 필요하지 않으므로 모든 Pub/Sub 처리가 하나의 앱 서버 내부에서 이루어집니다.
-
-따라서 Redis Pub/Sub은 앱 서버와 클라이언트 간의 실시간 메세지 처리 및 전송만을 담당합니다.
-
-### 추가 서버 확장이 된다면…?
-
-추가적으로 현재 버전을 업그레이드한다면
-Redis 서버를 앱 서버 외부로 꺼내 다음과 같은 이점을 확보할 수 있을 것이라 예상됩니다.
-
-1. **확장성**
     
-    > 다중 서버 구조에서 시스템 확장성이 좋아짐
-    메세지 브로커를 통해 모든 서버 간 동기화 가능
-    > 
-2. **고가용성**
-    
-    > 특정 앱 서버가 실패하더라고 다른 서버가 Redis를 통해 메세지를 받아 클라이언트에게 전달 가능
-    > 
-3. **실시간성**
-    
-    > WebSocket을 통해 클라이언트와 실시간 통신 유지
-    서버 간 지연 없시 메세지 동기화 가능
-    > 
+       <details>
+           <summary>RedisSubscriber 코드</summary>
+        
+              @Service
+              @RequiredArgsConstructor
+              public class RedisSubscriber implements MessageListener {
+              
+                  private final SimpMessagingTemplate messagingTemplate;
+              
+                  @Override
+                  public void onMessage(Message message, byte[] pattern) {
+                      String destination = new String(message.getChannel());
+                      String payload = new String(message.getBody());
+              
+                      this.messagingTemplate.convertAndSend(destination, payload);
+                  }
+              }
+     
+        </details>
+        
+<br>
+
+<table style="border:none; width: 100%; table-layout: fixed; max-width: 1200px; margin: auto;">
+   <tr>
+      <td style="background-image: url('https://github.com/user-attachments/assets/bfe81f38-f21f-4ed2-bad6-c8ba5664101b'); 
+                 background-size: cover; background-repeat: no-repeat; background-position: center;
+                 width: 30%; height: 200px;">
+      </td>
+      <td style="padding: 20px; vertical-align: top;">
+         <h3>현재 클라이언트의 실시간 채팅 이용 구조</h3>
+         <p>
+            Redis를 앱 서버에 내장하여 Redis Pub/Sub을 사용하는 구조로 구현되어 있습니다.<br>
+            따라서 서버 간의 메시지 동기화가 필요하지 않으므로 모든 Pub/Sub 처리가 하나의 앱 서버 내부에서 이루어집니다.<br>
+            Redis Pub/Sub은 앱 서버와 클라이언트 간의 실시간 메시지 처리 및 전송만을 담당합니다.
+         </p>
+      </td>
+   </tr>
+   <tr>
+      <td style="background-image: url('https://github.com/user-attachments/assets/f565bbbf-e257-4ba3-ad69-85a0372d5e60'); 
+                 background-size: cover; background-repeat: no-repeat; background-position: center;
+                 width: 30%; height: 200px;">
+      </td>
+      <td style="padding: 20px; vertical-align: top;">
+         <h3>추가 서버 확장이 된다면…?</h3>
+         <p>
+            추가적으로 현재 버전을 업그레이드한다면 Redis 서버를 앱 서버 외부로 꺼내 <br>다음과 같은 이점을 확보할 수 있을 것이라 예상됩니다.
+         </p>
+         <ol>
+            <li>
+               <b>확장성</b>: 다중 서버 구조에서 시스템 확장성이 좋아짐, 메시지 브로커를 통해 모든 서버 간 동기화 가능
+            </li>
+            <li>
+               <b>고가용성</b>: 특정 앱 서버가 실패하더라도 다른 서버가 Redis를 통해 메시지를 받아 클라이언트에게 전달 가능
+            </li>
+            <li>
+               <b>실시간성</b>: WebSocket을 통해 클라이언트와 실시간 통신 유지, 서버 간 지연 없이 메시지 동기화 가능
+            </li>
+         </ol>
+      </td>
+   </tr>
+</table>
+
+<br>
 
 # 📺 시연 영상
 
-https://youtu.be/j_S8XC5744c
+<a href="https://youtu.be/j_S8XC5744c" target="_blank">
+    <img src="https://github.com/user-attachments/assets/b0bb8244-8f0f-4d52-9daa-07a269e70769" alt="실시간 채팅 ver2. with Redis Pub/Sub 시연 영상" style="width:300px; height:auto; margin:20px;">
+</a>
 
-<aside>
-🗣
+<br><br>
 
-## 튜터님 피드백
+## 🗣 튜터님 피드백
 
-</aside>
+<details>
+   <summary>1. 레디스 Streams에 대해 언급하셨는데 streams를 사용하면 메시지 내구성이 어떻게 더 좋아지나요?</summary>
+   
+   <br>
+   
+   ## Redis Streams
+      
+   > Redis 5.0에서 도입된 강력한 데이터 구조  
+   > - 메세지 스트리밍 지원  
+   > - 메세지 큐(Message Queue)와 유사한 기능 제공  
+   > - 데이터 스트리밍, 이벤트 소싱, 로그 관리, 실시간 데이터 처리 등 다양한 애플리케이션에 사용 가능  
 
-- 1. 레디스 Streams에 대해 언급하셨는데 streams를 사용하면 메시지 내구성이 어떻게 더 좋아지나요?
-    - Redis Streams
-        
-        > Redis 5.0에서 도입된 강력한 데이터 구조
-        메세지 스트리밍 지원
-        메세지 큐(Message Queue)와 유사한 기능 제공
-        데이터 스트리밍, 이벤트 소싱, 로그 관리, 실시간 데이터 처리 등 다양한 애플리케이션에 사용 가능
-        > 
-        
-        ### 주요 개념
-        
-        - Stream
-            - 메세지들의 순서화된 로그(append-only log)
-            - 각 메세지는 고유한 ID와 데이터를 가짐
-            - ID를 기반으로 메세지 정렬
-        - Entry
-            - Stream 내의 개별 메세지
-            - 고유한 ID와 필드-값 쌍으로 구성된 데이터 포함
-        - ID
-            - 각 메세지는 Redis에서 고유한 ID를 자동으로 생성하거나 
-            사용자가 수동으로 지정 가능
-            - `timestamp=sequence` 형식(`1566987880000-0`)으로 구성
-        
-        ### Redis Pub/Sub과 Streams 비교
-        
-        | **특징** | **Redis Pub/Sub** | **Redis Streams** |
-        | --- | --- | --- |
-        | **메세지 보존** | 메세지를 구독자에게 즉시 전달
-        전달 후, 삭제 | 메세지가 보존되며,
-        소비자가 읽기 완료 후에도 유지 |
-        | **오프셋 관리** | X | 메세지 오프셋을 관리하여 정확한 재처리 가능 |
-        | **소비자 그룹** | X | O
-        (소비자별 메세지 분배 가능) |
-        | **재처리** | X | O
-        (특정 ID부터 다시 읽기 가능) |
-        | **실시간 처리** | 실시간 메세지 처리에 최적화 | 실시간 및 비실시간 처리 모두 가능 |
-        
-        ---
-        
-        ### 메세지 처리 상태
-        
-        - **읽기** : 소비자가 그룹에 할당된 메세지를 읽음
-        - **처리 완료**(Acknowledge) : 소비자가 처리한 메세지
-        - **미 확인 메세지**(Pending) : 소비자가 처리하지 못한 메세지
-            - 처리 실패 메세지
-                - PENDING 상태로 남은 메세지 추적
-                - 실패한 메세지는 다시 읽어와 재처리 가능
-        
-        ### 오프셋 관리
-        
-        - 소비자가 처리 중인 메세지의 위치를 추적
-        - 실시간 처리 특징
-            - **메세지 보존** : 실시간으로 처리하지 못한 메세지는 보존
-                - 나중에 읽기 및 재처리 가능
-            - **비동기 처리** : 여러 소비자가 동시에 작업하더라도 메세지가 보존되므로 안전하게 분배 및 처리 가능
-        
-        ### 소비자별 메세지 분배
-        
-        - 소비자 그룹은 메세지 분배를 효율적으로 관리하여 각 소비자가 병렬로 작업할 수 있도록 함
-        - 소비자 그룹 구조
-            - 하나의 Stream에 여러 소비자 그룹이 존재 가능
-            - 각 그룹은 독립적으로 메세지 관리
-        - 분배 방식
-            - **라운드 로빈**
-                - 각 메세지는 한 번에 하나의 소비자만 처리
-            - **오프셋 기반 재분배**
-                - 특정 소비자가 처리하지 못한 메세지는 PENDING 상태로 유지되고
-                다른 소비자가 처리 가능
-        
-        ### 메세지 분배 흐름
-        
-        1. Stream에 메세지 추가
-        2. 소비자 그룹으로 메세지 분배
-        3. 소비자가 메세지 읽음
-        4. 메세지 처리 완료
-        5. 미확인 메세지 재분배
-        
-        ---
-        
-        ### Pub/Sub과 Streams 병행
-        
-        - Pub/Sub : 실시간 처리
-            - 구독자에게 실시간으로 메세지 전달
-        - Streams로 메세지 보존 및 분석
-            - 메세지를 Streams에도 추가하여 보존 및 후속 처리
-        
-        ### 실시간 채팅에 Stream 적용 시나리오
-        
-        - 각 채팅방에 Stream을 생성
-        - 각 클라이언트가 하나의 소비자로 메세지 처리
-        - 클라이언트가 오프라인이면 메세지는 PENDING 상태로 유지
-        재접속 시, 다시 읽음
-        
-        Redis Streams는 Redis Pub/Sub의 한계를 보완하며,
-        메세지 보존, 소비자 그룹, 메세지 재처리 등의 기능을 제공합니다.
-        실시간 채팅이나 로그 처리와 같은 요구 사항에서 Steams는 훨씬 유연하며
-        Pub/Sub와 Steams를 함께 사용하거나 Streams로 완전히 전환하는 방식은 요구사항에 따라 설계 가능합니다.
-        
+   ### 주요 개념
+   - **Stream**: 메세지들의 순서화된 로그(append-only log)  
+   - **Entry**: Stream 내의 개별 메세지  
+   - **ID**: 고유 ID와 `timestamp=sequence` 형식  
+
+   ### Redis Pub/Sub과 Streams 비교
+   <table>
+      <thead>
+         <tr>
+            <th>특징</th>
+            <th>Redis Pub/Sub</th>
+            <th>Redis Streams</th>
+         </tr>
+      </thead>
+      <tbody>
+         <tr>
+            <td>메세지 보존</td>
+            <td>구독자에게 즉시 전달 후 삭제</td>
+            <td>메세지 보존 및 재처리 가능</td>
+         </tr>
+         <tr>
+            <td>오프셋 관리</td>
+            <td>불가</td>
+            <td>가능</td>
+         </tr>
+         <tr>
+            <td>소비자 그룹</td>
+            <td>불가</td>
+            <td>가능</td>
+         </tr>
+      </tbody>
+   </table>
+
+   ### 메세지 처리 상태
+   - **읽기**: 소비자가 그룹에 할당된 메세지를 읽음  
+   - **처리 완료**: 소비자가 처리한 메세지  
+   - **미 확인 메세지**: 처리 실패 메세지는 다시 읽어와 재처리 가능
+
+   Redis Pub/Sub의 경우 구독자가 없으면 메세지가 손실되는 내구성 문제가 발생합니다.  
+   현재 저는 Redis의 Hash 구조로 메세지 객체를 저장하여 내구성 문제를 보완하고 있습니다.  
+   여기에 메세지 저장 구조를 Redis Streams로 변경할 시, 다음과 같은 장점을 얻을 수 있습니다.  
+   
+   - 메시지 보존  
+   - 오프셋을 관리하여 정확한 재처리 가능  
+   - 소비자 그룹 지원  
+   - 실시간 및 비실시간 처리 가능
+
+<br><br>
+
+</details>
+
+   
+<details>
+   <summary>2. 레디스 pub/sub을 외부로 분리하는 것의 장점이 무엇인가요? 구체적인 이유와 함께 설명해주세요.</summary>
+       
+   ## 메세지 브로커를 독립된 서버로 분리 시 장점
+   
+   > 성능 격리, 신뢰성 향상, 낮은 전환 비용 면에서 장점
+   
+   ### 1. 성능 분리
+   
+   - Pub/Sub은 실시간 처리 특성상 빠른 처리 속도가 중요
+   - 메세지 트래픽이 높은 경우, Redis 서버의 CPU와 메모리 자원을 많이 사용
+   - Pub/Sub과 캐싱 또는 데이터 저장이 동일한 서버에서 처리되면 자원 경쟁이 발생할 수 있음
+     - Redis는 단일 쓰레드 기반으로 동작
+   - 독립된 서버를 사용하여 **성능 저하 방지**
+   
+   **분리된 서버는 Pub/Sub 전용으로 자원을 최적화**
+   
+   ### 2. 장애 격리
+   
+   - Pub/Sub 관련 문제가 캐싱이나 데이터 저장 작업에 영향을 미치지 않음
+     - Redis Pub/Sub의 상황에 따라 부하가 급증할 수 있음
+         - 클라이언트 수
+         - 메세지 전송량
+     - 이를 격리하지 않으면 Redis 전체 서비스가 불안정해질 수 있음
+   - 한 서버에 장애가 발생하더라도 다른 서버는 독립적으로 동작
+   - 서비스 중단을 최소화
+   
+   ### 3. 유지보수 용이성
+   
+   - 단일 Redis 서버에서 모든 작업 처리 시, 특정 작업의 업그레이드 또는 설정 변경 시, 다른 작업이 중단될 가능성이 있음
+   - 서버 설정과 모니터링을 분리
+     - 관리가 간단해짐
+     - 다른 Redis 기능에 영향을 미치지 않음
+         - Pub/Sub 서버를 업그레이드
+         - Pub/Sub 서버 재시작
+   
+   ### 4. 확장성 향상
+   
+   - Redis Pub/Sub은 특정 노드에 종속적
+     - 트래픽이 증가할수록 서버 분산 및 확장이 필요
+     - 분리된 서버
+         - 트래픽이 증가할 경우, 전용 서버를 추가하여 확장 가능
+         - Pub/Sub 작업의 분산 용이
+             - Redis 클러스터를 활용해 Pub/Sub 서버 간 데이터를 복제
+             - 구독자 간, 메세지 라우팅을 효율적으로 분배
+   
+   ## 메세지 브로커를 외부로 분리했을 때의 장점
+   
+   > Kafka, RabbitMQ와 같은 외부 메세지 브로커 도입
+   
+   ### 1. 메세지 보존
+   
+   - Redis Pub/Sub은 메세지가 전달되지 않은 경우 손실
+   - 외부 메세징 시스템 : 메세지를 보존하여 나중에 소비 가능
+   - 외부 메세지 브로커는 메세지를 디스크에 저장하므로 데이터 손실 방지
+   
+   ### 2. 메세지 분배와 소비자 그룹 관리
+   
+   - 다중 구독자가 있는 경우, 메세지 분배 : 처리 효율성 증가
+     - 특정 소비자가 느리게 처리하더라도 다른 소비자가 영향을 받지 않음
+   - Redis Pub/Sub : 모든 구독자에게 메세지를 브로드 캐스트
+   - Kafka, RabbitMQ 등 외부 메세지 브로커 : 소비자 그룹 지원, 메세지를 개별적으로 분배
+   
+   ### 3. 확장성과 대량 처리
+   
+   - Redis Pub/Sub : 단일 노드 기반, 확장이 제한적
+     - Redis Pub/Sub의 단일 노드 동작
+         
+         > Redis Pub/Sub의 메세징 작업이 특정 Redis 서버(노드)에서만 동작
+         > 클러스터 전체로 메세지를 자동으로 분배하거나 공유하지는 않음
+   
+         - Pub/Sub 채널과 메세지가 특정 노드에 종속
+             - Redis 클러스터 환경에서, 메세지를 발행한 노드와 구독자가 연결된 노드가 다르면 구독자가 메세지를 받지 못함
+             - 클러스터의 각 노드는 Pub/Sub 메세지를 다른 노드와 공유하지 않음
+         - 단일 노드 기반의 한계
+             - 확장성 제한
+                 - 메세지를 한 노드에서만 처리하므로 트래픽이 증가하면 해당 노드가 과부하 상태에 빠질 수 있습니다.
+             - 구독 제한
+                 - 구독자가 다른 노드에 연결되어 있다면 메세지를 받을 수 없습니다.
+             - 장애 복구
+                 - 해당 노드에 문제가 발생하면 메세징 서비스 중단
+         
+         ### Redis Pub/Sub의 단일 노드 문제 해결 방법
+         
+         - 메세지 브로커로 Redis Streams를 사용
+             - 메세지를 Stream에 저장하여 구독자가 연결되지 않은 경우에도 메세지를 읽을 수 있음
+             - 클러스터 환경에서도 여러 노드에 메세지를 분산 처리 가능
+         - 외부 메세지 브로커 사용
+         - Redis 클러스터 대신 단일 노드에 집중
+             - 단일 노드로 Redis Pub/Sub을 운영하되 충분한 성능을 제공하는 하드웨어(고성능 CPU, 메모리)를 사용하거나
+             Redis를 분리하여 Pub/Sub 전용 서버로 설정
+             - 단일 노드 기반 특징이 적합한 경우
+                 - 단일 노드 운영 : Redis 클러스터가 아닌 단일 Redis 노드로 애플리케이션을 운영할 경우
+                 - 실시간 메세징 : 메세지가 보존될 필요가 없는 실시간 알림 시스템
+                 - 소규모 애플리케이션 : 구족자와 발행자가 많지 않아 트래픽이 낮은 경우
+                 - 간단한 설계 : 추가적인 메세징 시스템 없이 Redis 하나로 모든 작업(캐싱, 메세징 등)을 처리해야 하는 경우
+         
+   - Kafka, RabbitMQ 등 외부 메세지 브로커
+     - 클러스터링을 통해 수평 확장 가능
+     - 대규모 그래픽 처리 가능
+   
+   ### 4. 복잡한 워크플로 관리
+   
+   - Redis Pub/Sub : 메세지를 단순히 전송하는 역할에 한정
+   - Kafka, RabbitMQ 등 외부 메세지 브로커 : 메세지 라우팅, 우선 순위 처리, 재처리 지원
+   - 복잡한 비즈니스 로직이 필요한 경우 외부 메세징 시스템이 더 적합
+     - 특정 조건에 따라 메세지를 다른 서비스로 분기 처리
+
+<br><br>
+   
+</details>
+       
+<details>
+   <summary>3. 다중서버 환경에서 메시지 동기화 장점을 말씀하셨는데 메시지 동기화에 대해 설명해주세요. 다중서버는 어떤 방식으로 구현하실 계획인가요?</summary>
     
-    Redis Pub/Sub의 경우 구독자가 없으면 메세지가 손실되는 내구성 문제가 발생합니다.
-    현재 저는 Redis의 Hash 구조로 메세지 객체를 저장하여 내구성 문제를 보완하고 있습니다.
-    여기에 메세지 저장 구조를 Redis Steams로 변경할 시, 다음과 같은 장점을 얻을 수 있습니다.
-    
-    - 메시지 보존
-    - 오프셋을 관리하여 정확한 재처리 가능
-    - 소비자 그룹 지원
-    - 실시간 및 비실시간 처리 가능
-- 2. 레디스 pub/sub을 외부로 분리하는 것의 장점이 무엇인가요? 구체적인 이유와 함께 설명해주세요.
-    
-    
-    ## 메세지 브로커를 독립된 서버로 분리 시 장점
-    
-    > 성능 격리, 신뢰성 향상, 낮은 전환 비용 면에서 장점
-    > 
-    
-    ### 1. 성능 분리
-    
-    - Pub/Sub은 실시간 처리 특성상 빠른 처리 속도가 중요
-    - 메세지 트래픽이 높은 경우, Redis 서버의 CPU와 메모리 자원을 많이 사용
-    - Pub/Sub과 캐싱 또는 데이터 저장이 동일한 서버에서 처리되면 자원 경쟁이 발생할 수 있음
-        - Redis는 단일 쓰레드 기반으로 동작
-    - 독립된 서버를 사용하여 **성능 저하 방지**
-    
-    **분리된 서버는 Pub/Sub 전용으로 자원을 최적화**
-    
-    ### 2. 장애 격리
-    
-    - Pub/Sub 관련 문제가 캐싱이나 데이터 저장 작업에 영향을 미치지 않음
-        - Redis Pub/Sub의 상황에 따라 부하가 급증할 수 있음
-            - 클라이언트 수
-            - 메세지 전송량
-        - 이를 격리하지 않으면 Redis 전체 서비스가 불안정해질 수 있음
-    - 한 서버에 장애가 발생하더라도 다른 서버는 독립적으로 동작
-    - 서비스 중단을 최소화
-    
-    ### 3. 유지보수 용이성
-    
-    - 단일 Redis 서버에서 모든 작업 처리 시, 특정 작업의 업그레이드 또는 설정 변경 시, 다른 작업이 중단될 가능성이 있음
-    - 서버 설정과 모니터링을 분리
-        - 관리가 간단해짐
-        - 다른 Redis 기능에 영향을 미치지 않음
-            - Pub/Sub 서버를 업그레이드
-            - Pub/Sub 서버 재시작
-    
-    ### 4. 확장성 향상
-    
-    - Redis Pub/Sub은 특정 노드에 종속적
-        - 트래픽이 증가할수록 서버 분산 및 확장이 필요
-        - 분리된 서버
-            - 트래픽이 증가할 경우, 전용 서버를 추가하여 확장 가능
-            - Pub/Sub 작업의 분산 용이
-                - Redis 클러스터를 활용해 Pub/Sub 서버 간 데이터를 복제
-                - 구독자 간, 메세지 라우팅을 효율적으로 분배
-    
-    ## 메세지 브로커를 외부로 분리했을 때의 장점
-    
-    > Kafka, RabbitMQ와 같은 외부 메세지 브로커 도입
-    > 
-    
-    ### 1. 메세지 보존
-    
-    - Redis Pub/Sub은 메세지가 전달되지 않은 경우 손실
-    - 외부 메세징 시스템 : 메세지를 보존하여 나중에 소비 가능
-    - 외부 메세지 브로커는 메세지를 디스크에 저장하므로 데이터 손실 방지
-    
-    ### 2. 메세지 분배와 소비자 그룹 관리
-    
-    - 다중 구독자가 있는 경우, 메세지 분배 : 처리 효율성 증가
-        - 특정 소비자가 느리게 처리하더라도 다른 소비자가 영향을 받지 않음
-    - Redis Pub/Sub : 모든 구독자에게 메세지를 브로드 캐스트
-    - Kafka, RabbitMQ 등 외부 메세지 브로커 : 소비자 그룹 지원, 메세지를 개별적으로 분배
-    
-    ### 3. 확장성과 대량 처리
-    
-    - Redis Pub/Sub : 단일 노드 기반, 확장이 제한적
-        - Redis Pub/Sub의 단일 노드 동작
-            
-            > Redis Pub/Sub의 메세징 작업이 특정 Redis 서버(노드)에서만 동작
-            클러스터 전체로 메세지를 자동으로 분배하거나 공유하지는 않음
-            > 
-            - Pub/Sub 채널과 메세지가 특정 노드에 종속
-                - Redis 클러스터 환경에서, 메세지를 발행한 노드와 구독자가 연결된 노드가 다르면 구독자가 메세지를 받지 못함
-                - 클러스터의 각 노드는 Pub/Sub 메세지를 다른 노드와 공유하지 않음
-            - 단일 노드 기반의 한계
-                - 확장성 제한
-                    - 메세지를 한 노드에서만 처리하므로 트래픽이 증가하면 해당 노드가 과부하 상태에 빠질 수 있습니다.
-                - 구독 제한
-                    - 구독자가 다른 노드에 연결되어 있다면 메세지를 받을 수 없습니다.
-                - 장애 복구
-                    - 해당 노드에 문제가 발생하면 메세징 서비스 중단
-            
-            ### Redis Pub/Sub의 단일 노드 문제 해결 방법
-            
-            - 메세지 브로커로 Redis Streams를 사용
-                - 메세지를 Stream에 저장하여 구독자가 연결되지 않은 경우에도 메세지를 읽을 수 있음
-                - 클러스터 환경에서도 여러 노드에 메세지를 분산 처리 가능
-            - 외부 메세지 브로커 사용
-            - Redis 클러스터 대신 단일 노드에 집중
-                - 단일 노드로 Redis Pub/Sub을 운영하되 충분한 성능을 제공하는 하드웨어(고성능 CPU, 메모리)를 사용하거나
-                Redis를 분리하여 Pub/Sub 전용 서버로 설정
-                - 단일 노드 기반 특징이 적합한 경우
-                    - 단일 노드 운영 : Redis 클러스터가 아닌 단일 Redis 노드로 애플리케이션을 운영할 경우
-                    - 실시간 메세징 : 메세지가 보존될 필요가 없는 실시간 알림 시스템
-                    - 소규모 애플리케이션 : 구족자와 발행자가 많지 않아 트래픽이 낮은 경우
-                    - 간단한 설계 : 추가적인 메세징 시스템 없이 Redis 하나로 모든 작업(캐싱, 메세징 등)을 처리해야 하는 경우
-            
-    - Kafka, RabbitMQ 등 외부 메세지 브로커
-        - 클러스터링을 통해 수평 확장 가능
-        - 대규모 그래픽 처리 가능
-    
-    ### 4. 복잡한 워크플로 관리
-    
-    - Redis Pub/Sub : 메세지를 단순히 전송하는 역할에 한정
-    - Kafka, RabbitMQ 등 외부 메세지 브로커 : 메세지 라우팅, 우선 순위 처리, 재처리 지원
-    - 복잡한 비즈니스 로직이 필요한 경우 외부 메세징 시스템이 더 적합
-        - 특정 조건에 따라 메세지를 다른 서비스로 분기 처리
-    
-- 3. 다중서버 환경에서 메시지 동기화 장점을 말씀하셨는데 메시지 동기화에 대해 설명해주세요. 다중서버는 어떤 방식으로 구현하실 계획인가요?
-    
-    ### 다중 서버 환경에서 메세지 동기화란?
-    
-    > 여러 서버가 동일한 메세지를 올바르게 처리하거나, 메세지를 공유하여 중복 작업 없이 협력하는 것을 의미
-    > 
-    - 주요 요구 사항
-        - **메세지 전달 보장** : 메세지가 모든 대상 서버로 전달되거나, 적어도 한 서버가 반드시 처리
-        - **중복 방지** : 동일한 메세지가 여러 서버에서 중복 처리되지 않도록 관리
-        - **장애 복구** : 서버가 다운되거나 복구되는 상황에서도 메세지 손실 없이 동기화
-    
-    ### 메세지 동기화 방법
-    
-    1. 서버 A, 서버 B, 서버 C가 Redis Pub/Sub의 동일한 채널을 구독(Subscribe)
-    2. 서버 A에서 `SimpMessagingTemplate`으로 WebSocket 메세지 발행
-    3. 해당 메세지를 Redis Pub/Sub 채널로 발행(Publish)
-    4. 해당 채널을 구독하는 모든 서버가 메세지 수신
-    5. 수신한 메세지를 각각의 서버에서 WebSocket으로 연결된 클라이언트에게 전달
+   ### 다중 서버 환경에서 메세지 동기화란?
+   
+   > 여러 서버가 동일한 메세지를 올바르게 처리하거나, 메세지를 공유하여 중복 작업 없이 협력하는 것을 의미
+   > 
+   - 주요 요구 사항
+     - **메세지 전달 보장** : 메세지가 모든 대상 서버로 전달되거나, 적어도 한 서버가 반드시 처리
+     - **중복 방지** : 동일한 메세지가 여러 서버에서 중복 처리되지 않도록 관리
+     - **장애 복구** : 서버가 다운되거나 복구되는 상황에서도 메세지 손실 없이 동기화
+   
+   ### 메세지 동기화 방법
+   
+   1. 서버 A, 서버 B, 서버 C가 Redis Pub/Sub의 동일한 채널을 구독(Subscribe)
+   2. 서버 A에서 `SimpMessagingTemplate`으로 WebSocket 메세지 발행
+   3. 해당 메세지를 Redis Pub/Sub 채널로 발행(Publish)
+   4. 해당 채널을 구독하는 모든 서버가 메세지 수신
+   5. 수신한 메세지를 각각의 서버에서 WebSocket으로 연결된 클라이언트에게 전달
+
+<br><br>
+      
+</details>
+
 </details>
 
 <details>
