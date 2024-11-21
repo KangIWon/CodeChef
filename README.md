@@ -1139,7 +1139,7 @@ Kafka로의 전환: 높은 트래픽 처리와 메시지 영속성을 고려하�
 
 <br>
 
-# 📺 의사 결정 및 트러블 슈팅
+# 📺 기술적 의사 결정 과정 및 트러블 슈팅
 <a href="https://www.youtube.com/watch?v=9qGgjG6jGpY" target="_blank">
     <img src="https://github.com/user-attachments/assets/eec30a8d-7bff-4126-8424-c7816e33c4a7" alt="의사 결정 및 트러블 슈팅 영상" style="width:300px; height:auto; margin:20px;">
 </a>
@@ -1505,7 +1505,7 @@ implementation 'org.webjars:stomp-websocket:2.3.3' // STOMP 클라이언트
 <details>
 <summary><b>🍁 실시간 채팅 구현 2 (Redis Pub/Sub)</b></summary>
 
-# 📺 의사 결정 및 트러블 슈팅
+# 📺 기술적 의사 결정 과정 및 트러블 슈팅
 
 <a href="https://youtu.be/vCQgVDShqlI" target="_blank">
     <img src="https://github.com/user-attachments/assets/fc1f13ef-c93b-4689-8fd9-f17b7b31af7c" alt="Redis Pub/Sub 도입 의사결정 과정 및 트러블 슈팅" style="width:300px; height:auto;">
@@ -1931,7 +1931,7 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
    ### 메세지 처리 상태
    - **읽기**: 소비자가 그룹에 할당된 메세지를 읽음  
    - **처리 완료**: 소비자가 처리한 메세지  
-   - **미 확인 메세지**: 처리 실패 메세지는 다시 읽어와 재처리 가능
+   - **미확인 메세지**: 처리 실패 메세지는 다시 읽어와 재처리 가능
 
    Redis Pub/Sub의 경우 구독자가 없으면 메세지가 손실되는 내구성 문제가 발생합니다.  
    현재 저는 Redis의 Hash 구조로 메세지 객체를 저장하여 내구성 문제를 보완하고 있습니다.  
@@ -2085,6 +2085,1172 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 </details>
 
+
+<details>
+<summary><b>🍁 실시간 채팅 구현 3 (RabbitMQ)</b></summary>
+
+# 📺 기술적 의사 결정 과정 및 트러블 슈팅
+
+<a href="https://youtu.be/yCCMRcLWwcA" target="_blank">
+    <img src="https://github.com/user-attachments/assets/e8ad3eda-dc4c-495d-9749-41f59d37262b" alt="실시간 채팅 구현 3(RabbitMQ) 기술적 의사 결정 과정 및 트러블 슈팅" style="width:300px; height:auto; margin:20px;">
+</a>
+
+
+# 🤔 기술적 의사 결정 과정
+
+> ❓ [왜 메세지 브로커를 RabbitMQ로 변경하였나요?](https://www.notion.so/RabbitMQ-13cd82ce485680f8bda6c10998951a4e?pvs=21) 
+
+- **트러블 슈팅** : 💥 [큐 구조 파악 Miss!](https://www.notion.so/Miss-13dd82ce48568090ad58cfe9baf54812?pvs=21)
+
+<br>
+
+# 🥏 서비스 흐름도
+
+![실시간 채팅 구현 3 (RabbitMQ) 서비스 흐름도](https://github.com/user-attachments/assets/af0dce90-a8b5-414a-8f52-c5f4a990e6b5)
+
+<br>
+
+# ✍️ 설계
+
+🗺️ [RabbitMQ 구조 설계](https://www.notion.so/RabbitMQ-13cd82ce485680949aefebcc62a70b21?pvs=21) 
+
+<br>
+
+# 🌱 구현 과정
+
+### 의존성 추가
+
+```java
+implementation 'org.springframework.boot:spring-boot-starter-amqp:2.6.4'
+```
+
+### WebSocketConfig 설정
+
+> 기본 설정은 이전 버전과 동일
+
+- **트러블 슈팅** : 💥 [WebSocketConfig Stomp Broker 설정 - 외부 메세지 브로커 사용을 위한 설정](https://www.notion.so/WebSocketConfig-Stomp-Broker-140d82ce485680c195f2f93c0e128cdd?pvs=21)
+
+  <br>
+
+### RabbitMQ 설정
+
+- RabbitMQConfig
+    
+   <details>   
+      <summary>RabbitMQConfig 클래스 코드</summary>
+      <blockquote>RabbitMQ 기본 설정을 위한 클래스</blockquote>
+        
+      @Slf4j
+      @Configuration
+      public class RabbitMQConfig {
+      
+         @Value("${spring.rabbitmq.host}")
+         private String host;
+      
+         @Value("${spring.rabbitmq.port}")
+         private int port;
+      
+         @Value("${spring.rabbitmq.client.username}")
+         private String username;
+      
+         @Value("${spring.rabbitmq.client.password}")
+         private String password;
+      
+         @Bean
+         public ConnectionFactory alarmConnectionFactory() {
+             CachingConnectionFactory factory = new CachingConnectionFactory(host, port);
+             factory.setUsername(username);
+             factory.setPassword(password);
+             return factory;
+         }
+      
+         // 발행용 채널
+         @Bean
+         public ConnectionFactory publishConnectionFactory() {
+             CachingConnectionFactory factory = new CachingConnectionFactory(host, port);
+             factory.setUsername(username);
+             factory.setPassword(password);
+             factory.setChannelCacheSize(15); // 발행용 캐시 크기
+             factory.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
+             factory.setPublisherReturns(true);
+             return factory;
+         }
+      
+         // 구독용 채널
+         @Bean
+         public ConnectionFactory subscribeConnectionFactory() {
+             CachingConnectionFactory factory = new CachingConnectionFactory(host, port);
+             factory.setUsername(username);
+             factory.setPassword(password);
+             factory.setChannelCacheSize(5);  // 수신용 캐시 크기
+             factory.setRequestedHeartBeat(20); // 수신용에 적합한 설정 추가
+             return factory;
+         }
+      
+         @Bean
+         public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory() {
+             SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+             factory.setConnectionFactory(subscribeConnectionFactory());
+             factory.setMessageConverter(new Jackson2JsonMessageConverter());
+             return factory;
+         }
+      
+         @Bean
+         public DirectExchange chatDirectExchange(RabbitAdmin rabbitAdmin) {
+             DirectExchange directExchange = new DirectExchange("chat.direct.exchange", true, false);
+             rabbitAdmin.declareExchange(directExchange);
+             return directExchange;
+         }
+      
+         @Bean
+         public DirectExchange chatInitDirectExchange(RabbitAdmin rabbitAdmin) {
+             DirectExchange directExchange = new DirectExchange("chat.init.direct.exchange", true, false);
+             rabbitAdmin.declareExchange(directExchange);
+             return directExchange;
+         }
+      
+         @Bean
+         SimpleMessageListenerContainer container(MessageListenerAdapter messageListener) {
+             SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+             container.setConnectionFactory(subscribeConnectionFactory());
+             container.setMessageListener(messageListener);
+             return container;
+         }
+      
+         // 수신할 메서드 설정
+         @Bean
+         public MessageListenerAdapter messageListener(RabbitMQChatConsumer chatConsumer) {
+             return new MessageListenerAdapter(chatConsumer, "onMessage");
+         }
+      
+         @Bean
+         public RabbitAdmin rabbitAdmin() {
+             return new RabbitAdmin(publishConnectionFactory());
+         }
+      
+         @Bean
+         public RabbitTemplate publishTemplate() {
+             RabbitTemplate rabbitTemplate = new RabbitTemplate(publishConnectionFactory());
+             rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+             rabbitTemplate.setConfirmCallback(((correlationData, ack, cause) -> {
+                 if (ack) {
+                     log.info("Message successfully produced");
+                 } else {
+                     log.info("Message producing failed: {}", cause);
+                 }
+             }));
+      
+             rabbitTemplate.setReturnsCallback(returnedMessage -> {
+                 String message = new String(returnedMessage.getMessage().getBody());
+                 int replyCode = returnedMessage.getReplyCode();
+                 String replyText = returnedMessage.getReplyText();
+                 String exchange = returnedMessage.getExchange();
+                 String routingKey = returnedMessage.getRoutingKey();
+                 log.info("Message returned: {}, ReplyCode: {}, ReplyText: {}, Exchange: {}, RoutingKey: {}", message, replyCode, replyText, exchange, routingKey);
+             });
+             return rabbitTemplate;
+         }
+      
+         @Bean
+         public DirectExchange deadLetterExchange() {
+             return new DirectExchange("dlx-exchange");
+         }
+      
+         @Bean
+         public Queue deadLetterQueue() {
+             return new Queue("dlx-queue", true);
+         }
+      
+         @Bean
+         public Binding deadLetterBinding(Queue deadLetterQueue, DirectExchange deadLetterExchange) {
+             return BindingBuilder.bind(deadLetterQueue).to(deadLetterExchange).with("dlx-routing-key");
+         }
+         
+         // 기타 설정 생략
+      }
+  
+   </details>
+        
+    - 작업 기준으로 채널 및 Exchange 분리
+        - 발행용
+            - 채널 : `publishConnectionFactory`
+            - rabbitTemplate : `publishTemplate`
+        - 구독용
+            - 채널 : `subscribeConnectionFactory`
+    - 큐에 메세지 발행을 동적으로 감지하기 위한 설정
+        - `SimpleRabbitListenerContainerFactory`
+        - `SimpleMessageListenerContainer`
+        - `MessageListenerAdapter` : 메세지 수신할 메서드 설정
+    - Topic Exchange 생성 : 작업 기준으로 Exchange를 분리
+        - 채팅용 : `chatDirectExchange`
+            - name : `chat.direct.exchange`
+            - durable : `true`
+            - autoDelete : `false`
+        - 채팅방 이전 메세지 로딩용 : `chatInitDirectExchange`
+            - name : `chat.init.direct.exchange`
+            - durable : `true`
+            - autoDelete : `false`
+        - **트러블 슈팅** : 💥 [Exchange 선택](https://www.notion.so/Exchange-144d82ce4856809d93acfc75f24ac46c?pvs=21)
+    - 실패한 메세지 처리를 위한 설정
+        - `deadLetterQueue`
+        - `deadLetterExchange`
+        - `deadLetterBinding`
+  
+  <br>  
+
+### RabbitMQChatService
+
+> 채팅방 전용 큐, 바인딩 추가/삭제
+> 컨테이너에 큐 추가/삭제
+
+<details>
+   <summary>RabbitMQChatService 전체 코드</summary>
+
+      @Slf4j
+      @Service
+      @RequiredArgsConstructor
+      public class RabbitMQChatService {
+      
+        private final SimpleMessageListenerContainer container;
+        private final RedisChatRepository chatRepository;
+        private final RabbitAdmin rabbitAdmin;
+        private final DirectExchange chatDirectExchange;
+        private final DirectExchange chatInitDirectExchange;
+      
+        private final String CHAT = "chat";
+        private final String INIT = "init";
+        private final String BINDING = "binding";
+      
+        /**
+         * 채팅방 생성
+         *   - 채팅방 전용 큐 생성
+         *   - 채팅방 전용 Exchange 생성 : Direct Exchange
+         *   - 채팅방 큐와 채팅방 Exchange 바인딩
+         * @param roomId : 채팅방 ID
+         */
+        public void addChatRoom(Long roomId) {
+            log.info("create chat room: {}", roomId);
+            this.declareChatBinding(roomId);
+            this.declareInitBinding(roomId);
+            this.container.addQueueNames(
+                    this.getRoomQName(roomId),
+                    this.getInitQName(roomId)
+            );
+        }
+      
+        /**
+         * 채팅방 삭제
+         *   - 채팅방 Direct Exchange 삭제
+         * @param roomId : 채팅방 ID
+         */
+        public void removeChatRoom(Long roomId) {
+            log.info("chat room {} is deleted", roomId);
+            this.removeChatBinding(roomId);
+            this.removeInitBinding(roomId);
+            this.container.removeQueueNames(
+                    this.getRoomQName(roomId),
+                    this.getInitQName(roomId)
+            );
+        }
+      
+        /**
+         * 채팅방 큐 이름 Getter
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        public String getRoomQName(Long roomId) {
+            return new StringBuffer()
+                    .append(CHAT)
+                    .append(roomId)
+                    .toString();
+        }
+      
+        /**
+         * 채팅방 이전 메세지 불러오기 용 큐 이름 Getter
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        public String getInitQName(Long roomId) {
+            return new StringBuffer()
+                    .append(CHAT)
+                    .append(INIT)
+                    .append(roomId)
+                    .toString();
+        }
+      
+        /**
+         * 채팅방 큐 선언
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private Queue declareChatQueue(Long roomId) {
+            String queueName = this.getRoomQName(roomId);
+            Map<String, Object> args = new HashMap<>(Map.of(
+                    "x-message-ttl", 10000,  // 메세지 TTL : 10초
+                    "x-max-length", 1000,  // 큐 길이
+                    "x-overflow", "drop-head"  // 큐 길이 초과시, 가장 오래된 메세지 삭제
+            ));
+      
+            Queue chatQueue = new Queue(queueName, true, false, true, args);
+            this.rabbitAdmin.declareQueue(chatQueue);
+            return chatQueue;
+        }
+      
+        /**
+         * 채팅방 이전 메세지 불러오기 용 큐 선언
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private Queue declareInitQueue(Long roomId) {
+            String queueName = this.getInitQName(roomId);
+            Map<String, Object> args = new HashMap<>(Map.of(
+                    "x-message-ttl", 10000,  // 메세지 TTL : 10초
+                    "x-max-length", 1000,  // 큐 길이
+                    "x-overflow", "drop-head"  // 큐 길이 초과시, 가장 오래된 메세지 삭제
+            ));
+      
+            Queue initQueue = new Queue(queueName, true, false, true, args);
+            this.rabbitAdmin.declareQueue(initQueue);
+            return initQueue;
+        }
+      
+        /**
+         * 채팅방 routingKey Getter
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        public String getChatRoutingKey(Long roomId) {
+            return new StringBuffer()
+                    .append(chatDirectExchange.getName())
+                    .append(".")
+                    .append(roomId)
+                    .append(".")
+                    .append(BINDING)
+                    .toString();
+        }
+      
+        /**
+         * 채팅방 이전 메세지 불러오기 용 routingKey Getter
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        public String getInitRoutingKey(Long roomId) {
+            return new StringBuffer()
+                    .append(chatInitDirectExchange.getName())
+                    .append(".")
+                    .append(roomId)
+                    .append(".")
+                    .append(BINDING)
+                    .toString();
+        }
+      
+        /**
+         * 채팅방 Binding 선언
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private void declareChatBinding(Long roomId){
+            Binding chatBinding = this.getBinding(
+                    this.declareChatQueue(roomId),
+                    chatDirectExchange,
+                    this.getChatRoutingKey(roomId)
+            );
+            this.rabbitAdmin.declareBinding(chatBinding);
+        }
+      
+        /**
+         * 채팅방 이전 메세지 불러오기 용 Binding 선언
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private void declareInitBinding(Long roomId) {
+            Binding initBinding = this.getBinding(
+                    this.declareInitQueue(roomId),
+                    chatInitDirectExchange,
+                    this.getInitRoutingKey(roomId)
+            );
+      
+            this.rabbitAdmin.declareBinding(initBinding);
+        }
+      
+        /**
+         * 채팅방 Binding 삭제
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private void removeChatBinding(Long roomId) {
+            Binding chatBinding = this.getBinding(
+                    new Queue(this.getRoomQName(roomId)),
+                    this.chatDirectExchange,
+                    this.getChatRoutingKey(roomId)
+            );
+            this.rabbitAdmin.removeBinding(chatBinding);
+        }
+      
+        /**
+         * 채팅방 이전 메세지 불러오기 용 Binding 삭제
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+        private void removeInitBinding(Long roomId) {
+            Binding initBinding = this.getBinding(
+                    new Queue(this.getInitQName(roomId)),
+                    this.chatInitDirectExchange,
+                    this.getInitRoutingKey(roomId)
+            );
+            this.rabbitAdmin.removeBinding(initBinding);
+        }
+      
+        /**
+         * Binding Getter
+         * @param queue : 큐
+         * @param exchange : direct Exchange
+         * @param routingKey : 라우팅 키
+         * @return
+         */
+        private Binding getBinding(Queue queue, Exchange exchange, String routingKey) {
+            return BindingBuilder.bind(queue)
+                    .to(exchange)
+                    .with(routingKey).noargs();
+        }
+      }
+</details>
+    
+<details>
+   <summary>채팅방 생성</summary>
+   
+   - 큐 생성
+     
+      <details>
+         <summary>채팅용 큐 생성</summary>
+         
+         - durable : `true` (서버가 재시작되더라도 큐 유지)
+         - exclusive : `false` (여러 Connection에서 큐 공유)
+         - autoDelete : `true` (마지막 Consumer가 연결을 끊으면 큐 삭제)
+         - 메세지 TTL : 10초
+         - 큐 길이 : 1000
+         - 큐 길이 초과시, 가장 오래된 메세지 삭제
+         - 실패한 메세지 처리
+             - DLX(Dead Letter Exchange) 지정
+             - Dead Letter Routing Key 지정
+         - 큐 이름 : `chat-room.{roomId}`
+         
+         ```java
+         /**
+          * 채팅방 큐 선언
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         private Queue declareChatQueue(Long roomId) {
+             String queueName = this.getRoomQName(roomId);
+             Map<String, Object> args = new HashMap<>(Map.of(
+                     "x-message-ttl", 10000,  // 메세지 TTL : 10초
+                     "x-max-length", 1000,  // 큐 길이
+                     "x-overflow", "drop-head",  // 큐 길이 초과시, 가장 오래된 메세지 삭제
+                     "x-dead-letter-exchange", "dlx-exchange",  // Dead Letter Exchange 지정
+                     "x-dead-letter-routing-key", "dlx-routing-key"  // Dead Letter Routing Key 지정
+             ));
+         
+             Queue chatQueue = new Queue(queueName, true, false, true, args);
+             this.rabbitAdmin.declareQueue(chatQueue);
+             return chatQueue;
+         }
+         
+         /**
+          * 채팅방 큐 이름 Getter
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         public String getRoomQName(Long roomId) {
+             return new StringBuffer()
+                     .append(CHAT_ROOM)
+                     .append(".")
+                     .append(roomId)
+                     .toString();
+         }
+         ```
+      </details>
+            
+      <details>
+         <summary>데이터 로딩용 큐 생성</summary>
+         - durable : `true` (서버가 재시작되더라도 큐 유지)
+         - exclusive : `false` (여러 Connection에서 큐 공유)
+         - autoDelete : `true` (마지막 Consumer가 연결을 끊으면 큐 삭제)
+         - 메세지 TTL : 10초
+         - 큐 길이 : 1000
+         - 큐 길이 초과시, 가장 오래된 메세지 삭제
+         - 실패한 메세지 처리
+             - DLX(Dead Letter Exchange) 지정
+             - Dead Letter Routing Key 지정
+         - 큐 이름 : `chat-room.{roomId}.init`
+         
+         ```java
+         /**
+          * 채팅방 이전 메세지 불러오기 용 큐 선언
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         private Queue declareInitQueue(Long roomId) {
+             String queueName = this.getInitQName(roomId);
+             Map<String, Object> args = new HashMap<>(Map.of(
+                     "x-message-ttl", 10000,  // 메세지 TTL : 10초
+                     "x-max-length", 1000,  // 큐 길이
+                     "x-overflow", "drop-head",  // 큐 길이 초과시, 가장 오래된 메세지 삭제
+                     "x-dead-letter-exchange", "dlx-exchange",  // Dead Letter Exchange 지정
+                     "x-dead-letter-routing-key", "dlx-routing-key"  // Dead Letter Routing Key 지정  // 큐 길이 초과시, 가장 오래된 메세지 삭제
+             ));
+         
+             Queue initQueue = new Queue(queueName, true, false, true, args);
+             this.rabbitAdmin.declareQueue(initQueue);
+             return initQueue;
+         }
+         
+         /**
+          * 채팅방 이전 메세지 불러오기 용 큐 이름 Getter
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         public String getInitQName(Long roomId) {
+             return new StringBuffer()
+                     .append(CHAT_ROOM)
+                     .append(".")
+                     .append(roomId)
+                     .append(".")
+                     .append(INIT)
+                     .toString();
+         }
+         ```
+      </details>
+         
+   - 바인딩 생성
+     
+      <details>
+         <summary>채팅방 큐의 바인딩 생성</summary>
+         - 채팅용 큐 생성 : `chat-room.{roomId}`
+         - routingKey 생성 : `chat.direct.exchange.{roomId}.binding`
+         
+         ```java
+         /**
+          * 채팅방 Binding 선언
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         private void declareChatBinding(Long roomId){
+             Binding chatBinding = this.getBinding(
+                     this.declareChatQueue(roomId),
+                     chatDirectExchange,
+                     this.getChatRoutingKey(roomId)
+             );
+             this.rabbitAdmin.declareBinding(chatBinding);
+         }
+         
+         /**
+          * 채팅방 routingKey Getter
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         public String getChatRoutingKey(Long roomId) {
+             return new StringBuffer()
+                     .append(chatDirectExchange.getName())
+                     .append(".")
+                     .append(roomId)
+                     .append(".")
+                     .append(BINDING)
+                     .toString();
+         }
+         
+         /**
+          * Binding Getter
+          * @param queue : 큐
+          * @param exchange : direct Exchange
+          * @param routingKey : 라우팅 키
+          * @return
+          */
+         private Binding getBinding(Queue queue, Exchange exchange, String routingKey) {
+             return BindingBuilder.bind(queue)
+                     .to(exchange)
+                     .with(routingKey).noargs();
+         }
+         ```
+   
+      </details>
+         
+      <details>
+         <summary>데이터 로딩용 큐의 바인딩 생성</summary>
+         
+         - 채팅용 큐 생성 : `chat-room.{roomId}.init`
+         - routingKey 생성 : `chat.init.direct.exchange.{roomId}.binding`
+         
+         ```java
+         /**
+          * 채팅방 이전 메세지 불러오기 용 Binding 선언
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         private void declareInitBinding(Long roomId) {
+             Binding initBinding = this.getBinding(
+                     this.declareInitQueue(roomId),
+                     chatInitDirectExchange,
+                     this.getInitRoutingKey(roomId)
+             );
+         
+             this.rabbitAdmin.declareBinding(initBinding);
+         }
+         
+         /**
+          * 채팅방 이전 메세지 불러오기 용 routingKey Getter
+          * @param roomId : 채팅방 ID
+          * @return
+          */
+         public String getInitRoutingKey(Long roomId) {
+             return new StringBuffer()
+                     .append(chatInitDirectExchange.getName())
+                     .append(".")
+                     .append(this.getInitQName(roomId))
+                     .append(".")
+                     .append(BINDING)
+                     .toString();
+         }
+         
+         /**
+          * Binding Getter
+          * @param queue : 큐
+          * @param exchange : direct Exchange
+          * @param routingKey : 라우팅 키
+          * @return
+          */
+         private Binding getBinding(Queue queue, Exchange exchange, String routingKey) {
+             return BindingBuilder.bind(queue)
+                     .to(exchange)
+                     .with(routingKey).noargs();
+         }
+         ```
+   
+      </details>
+         
+   - 컨테이너에 큐 추가
+   
+   ```java
+   /**
+   * 채팅방 생성
+   *   - 채팅방 전용 큐 생성
+   *   - 채팅방 전용 Exchange 생성 : Direct Exchange
+   *   - 채팅방 큐와 채팅방 Exchange 바인딩
+   * @param roomId : 채팅방 ID
+   */
+   public void addChatRoom(Long roomId) {
+     log.info("create chat room: {}", roomId);
+     this.declareChatBinding(roomId);
+     this.declareInitBinding(roomId);
+     this.container.addQueueNames(
+             this.getRoomQName(roomId),
+             this.getInitQName(roomId)
+     );
+   }
+   ```
+</details>
+    
+<details>
+   <summary>채팅방 삭제</summary>
+   
+    - 채팅방 큐는 Consumer가 없으면 자동으로 삭제
+    
+      <details>
+         <summary>채팅방 큐의 바인딩 삭제</summary>
+        
+         ```java
+         /**
+         * 채팅방 Binding 삭제
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+         private void removeChatBinding(Long roomId) {
+            Binding chatBinding = this.getBinding(
+                    new Queue(this.getRoomQName(roomId)),
+                    this.chatDirectExchange,
+                    this.getChatRoutingKey(roomId)
+            );
+            this.rabbitAdmin.removeBinding(chatBinding);
+         }
+         ```
+         
+      </details>
+        
+      <details>
+         <summary>데이터 로딩용 큐의 바인딩 삭제</summary>
+        
+         ```java
+         /**
+         * 채팅방 이전 메세지 불러오기 용 Binding 삭제
+         * @param roomId : 채팅방 ID
+         * @return
+         */
+         private void removeInitBinding(Long roomId) {
+            Binding initBinding = this.getBinding(
+                    new Queue(this.getInitQName(roomId)),
+                    this.chatInitDirectExchange,
+                    this.getInitRoutingKey(roomId)
+            );
+            this.rabbitAdmin.removeBinding(initBinding);
+         }
+         ```
+         
+      </details>
+        
+    - 컨테이너에서 큐 삭제
+    
+    ```java
+        /**
+         * 채팅방 삭제
+         *   - 채팅방 Direct Exchange 삭제
+         * @param roomId : 채팅방 ID
+         */
+        public void removeChatRoom(Long roomId) {
+            log.info("chat room {} is deleted", roomId);
+            this.removeChatBinding(roomId);
+            this.removeInitBinding(roomId);
+            this.container.removeQueueNames(
+                    this.getRoomQName(roomId),
+                    this.getInitQName(roomId)
+            );
+        }
+        
+    ```
+</details>
+ 
+  <br>   
+
+### 채팅방 입장(구독)
+
+<details>
+   <summary>
+      <b></b>Controller</b> 코드
+      <ul>
+         <li>채팅방 이전 메세지 로드 및 채팅방 신규 유저 입장 안내 메세지 발행</li>
+         <li>채팅방 전용 큐 생성</li>
+         <li>큐를 DirectExchange에 바인딩</li>
+         <li>컨테이너에 큐 추가</li>
+      </ul>
+   </summary>
+    ```java
+    /**
+     * 채팅방 입장(구독)
+     * @param roomId : 채팅방 ID
+     * @param payload : 채팅방 메세지 조회 페이징 정보
+     * @param headerAccessor : 인증 유저 정보를 얻기 위한 headerAccessor
+     */
+    @MessageMapping("/chat-room/{roomId}/subscribe")
+    public void handleSubscription(@DestinationVariable Long roomId,
+                                   @Payload(required = false) String payload,
+                                   StompHeaderAccessor  headerAccessor
+    ) {
+        ChatUser chatUser = this.getChatUser(headerAccessor);
+        log.info("subscribe : chat-room-{}, host : {}", roomId, chatUser.getId());
+        this.messageService.getMessages(payload, roomId, chatUser.getId());
+        this.messageService.subscribeChatRoom(roomId, chatUser);
+    }
+    ```
+</details>
+    
+<details>
+   <summary>**Service** 코드</summary>
+    - `getMessages()` : 페이징 된 이전 메세지 발행
+        
+        ```java
+        /**
+         * 이전 메세지 로드
+         * @param payload : 페이징 정보
+         * @param roomId : 채팅방 ID
+         * @param userId : 유저 ID
+         */
+        public void getMessages(String payload, Long roomId, Long userId) {
+            try {
+                JsonNode node = objectMapper.readTree(payload);
+                int page = node.get("page") == null ? 1 : node.get("page").asInt();
+                int size = node.get("size") == null ? 10 : node.get("size").asInt();
+        
+                Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "id"));
+                Page<MessageDto> messageList = this.chatRepository.findAllMessageByRoomId(roomId, pageable);
+                if (messageList.isEmpty()) {
+                    return;
+                }
+                log.info("load size : {}", messageList.getTotalElements());
+        
+                String destination = this.producer.getInitDestination(roomId, userId);
+                messageList.forEach(messageDto ->
+                        this.producer.sendMessage(
+                                chatInitDirectExchange.getName(),
+                                this.chatService.getInitRoutingKey(roomId),
+                                this.producer.getMessage(destination, new MessageGetResponse(messageDto))
+                        )
+                );
+            } catch (IOException e) {
+                throw new ApiException(ErrorStatus.JSON_READ_FAILED);
+            }
+            }
+        ```
+        
+    - `subscribeChatRoom()` : 채팅방 입장 안내 메세지 발행
+        - 채팅방 생성 시,
+            - 채팅방 생성 안내 메세지 발행
+            - 채팅방 방장 안내 메세지 발행
+        - 채팅방 단순 입장 시,
+            - 신규 유저 채팅방 입장 안내 메세지 발행
+        
+        ```bash
+        /**
+         * 채팅방 입장(구독)
+         * @param roomId : 채팅방 ID
+         * @param chatUser : 채팅방 입장 유저
+         */
+        public void subscribeChatRoom(Long roomId, ChatUser chatUser) {
+            Long hostId = this.chatRepository.findChatRoomByIDAndGetHostId(roomId);
+        
+            if (hostId == null) {
+                throw new ApiException(ErrorStatus.NOT_FOUND_CHATROOM);
+            }
+        
+            String routingKey = this.chatService.getChatRoutingKey(roomId);
+            String destination = this.producer.getChatRoomDestination(roomId);
+            String email = chatUser.getEmail();
+        
+            if (Objects.equals(hostId, chatUser.getId())) {
+                this.chatService.addChatRoom(roomId);
+                List<Message> messageList = new ArrayList<>();
+        
+                ChatMessage createMessage = ChatMessage.getMessage(
+                        this.chatRepository.generateId(ID_MESSAGE),
+                        CREATE,
+                        roomId,
+                        null
+                );
+        
+                MessageDto savedCreateMessage = this.chatRepository.saveMessage(createMessage);
+                Message createMSG = this.producer.getMessage(destination, new MessageGetResponse(savedCreateMessage));
+                messageList.add(createMSG);
+        
+                ChatMessage newHostMessage = ChatMessage.getMessage(
+                        this.chatRepository.generateId(ID_MESSAGE),
+                        NEW_HOST,
+                        roomId,
+                        email
+                );
+        
+                MessageDto savednewHostMessage = this.chatRepository.saveMessage(newHostMessage);
+                Message newHostMSG = this.producer.getMessage(destination, new MessageGetResponse(savednewHostMessage));
+                messageList.add(newHostMSG);
+        
+                messageList.forEach(message ->
+                    this.producer.sendMessage(
+                            chatDirectExchange.getName(),
+                            routingKey,
+                            message
+                    )
+                );
+                return;
+            }
+        
+            ChatMessage message = ChatMessage.getMessage(
+                    this.chatRepository.generateId(ID_MESSAGE),
+                    IN,
+                    roomId,
+                    email
+            );
+        
+            MessageDto savedMessage = this.chatRepository.saveMessage(message);
+            Message sendMessage = this.producer.getMessage(destination, new MessageGetResponse(savedMessage));
+            this.producer.sendMessage(
+                    chatDirectExchange.getName(),
+                    routingKey,
+                    sendMessage
+            );
+        }
+        ```
+</details>
+
+  <br>
+
+### 채팅 메세지 전송
+
+<details>
+   <summary><b>Controller</b> 코드 : 채팅 메세지 발행</summary>
+
+    /**
+     * 메세지 전송
+     * @param roomId : 채팅방 Id
+     * @param content : 채팅 메세지
+     * @param headerAccessor : 인증 유저 정보를 얻기 위한 headerAccessor
+     */
+    @MessageMapping("/chat-room/{roomId}")
+    public void handleSendMessage(@DestinationVariable Long roomId,
+                                  @Payload String content,
+                                  StompHeaderAccessor  headerAccessor
+    ) {
+        ChatUser chatUser = this.getChatUser(headerAccessor);
+        log.info("send message : chat-room-{}, host : {} / message : {}", roomId, chatUser.getId(), content);
+    
+        this.messageService.sendMessage(chatUser, roomId, content);
+    }
+</details>
+
+<details>
+   <summary><b>Service</b> 코드</summary>
+   - `sendMessage()` : 채팅 메세지 발행
+
+      /**
+      * 채팅 메세지 전송
+      * @param chatUser : 메세지 전송 유저
+      * @param roomId : 채팅방 ID
+      * @param content : 전송할 메세지 문자열
+      */
+      public void sendMessage(ChatUser chatUser, Long roomId, String content) {
+         try {
+             JsonNode node = objectMapper.readTree(content);
+             content = node.get("content").asText();
+      
+             ChatMessage message = ChatMessage.getMessage(
+                     this.chatRepository.generateId(ID_MESSAGE),
+                     roomId,
+                     chatUser,
+                     content
+             );
+      
+             MessageDto savedMessage = this.chatRepository.saveMessage(message);
+             String destination = this.producer.getChatRoomDestination(roomId);
+             Message sendMessage = this.producer.getMessage(destination, new MessageGetResponse(savedMessage));
+             this.producer.sendMessage(
+                     chatDirectExchange.getName(),
+                     this.chatService.getChatRoutingKey(roomId),
+                     sendMessage
+             );
+         } catch (JsonProcessingException e) {
+             throw new ApiException(ErrorStatus.JSON_READ_FAILED);
+         }
+      }
+</details>
+
+  <br> 
+
+### 채팅방 퇴장
+
+<details>
+   <summary>
+      <b>Controller</b> 코드
+      <ul>
+         <li>유저 퇴장 안내 및 방장 승계 안내 메세지 발행</li>
+         <li>채팅방 입장 유저가 없을 시, 채팅방 전용 큐의 바인딩 삭제</li>
+         <li>컨테이너에서 채팅방 전용 큐 삭제</li>
+      </ul>
+   </summary>
+    
+   ```java
+   /**
+   * 채팅방 퇴장
+   * @param roomId : 채팅방 ID
+   * @param headerAccessor : 인증 유저 정보를 얻기 위한 headerAccessor
+   */
+   @MessageMapping("/chat-room/{roomId}/leave")
+   public void handleUnsubscription(@DestinationVariable Long roomId,
+                                  @Payload UnsubscribeDto dto,
+                                  StompHeaderAccessor  headerAccessor
+   ) {
+     ChatUser chatUser = this.getChatUser(headerAccessor);
+     log.info("unsubscribe : chat-room-{}, host : {}", roomId, chatUser.getId());
+   
+     this.messageService.unsubscribeChatRoom(roomId, dto, chatUser);
+   }
+   ```
+</details>
+    
+<details>
+   <summary>**Service** 코드</summary>
+   - `unsubscribeChatRoom()`
+     - 유저 퇴장 안내 메세지 발행
+     - 방장 퇴장 시, 방장 승계 안내 메세지 발행
+     
+     ```java
+     /**
+      * 채팅방 퇴장(구독 취소)
+      * @param roomId : 채팅방 ID
+      * @param dto : 방장 승계 정보(success, nextHostId)
+      * @param chatUser : 퇴장 유저 ID
+      */
+     public void unsubscribeChatRoom(Long roomId, UnsubscribeDto dto, ChatUser chatUser) {
+         boolean isSuccess = dto.isSuccess();
+         Long nextHostId = dto.getNextHostId();
+         if (isSuccess && nextHostId == null) {
+             this.chatService.removeChatRoom(roomId);
+             return;
+         }
+     
+         List<Message> messageList = new ArrayList<>();
+         String destination = this.producer.getChatRoomDestination(roomId);
+     
+         ChatMessage outMessage = ChatMessage.getMessage(
+                 this.chatRepository.generateId(ID_MESSAGE),
+                 OUT,
+                 roomId,
+                 chatUser.getEmail()
+         );
+         MessageDto savedOutMessage = this.chatRepository.saveMessage(outMessage);
+         messageList.add(this.producer.getMessage(destination, new MessageGetResponse(savedOutMessage)));
+     
+         if (isSuccess) {
+             String nextHostEmail = this.chatRepository.findEmailById(nextHostId);
+             ChatMessage successMessage = ChatMessage.getMessage(
+                     this.chatRepository.generateId(ID_MESSAGE),
+                     NEW_HOST,
+                     roomId,
+                     nextHostEmail
+             );
+             MessageDto savedSuccessMessage = this.chatRepository.saveMessage(successMessage);
+             messageList.add(this.producer.getMessage(destination, new MessageGetResponse(savedSuccessMessage)));
+         }
+     
+         messageList.forEach(message ->
+                 this.producer.sendMessage(
+                         chatDirectExchange.getName(),
+                         this.chatService.getChatRoutingKey(roomId),
+                         message
+                 )
+         );
+     }
+     ```
+</details>
+
+  <br>
+  
+### RabbitMQChatProducer
+
+> `publishTemplate` 을 통해 메세지 발행
+
+<details>
+   <summary>`RabbitMQChatProducer` 코드</summary>
+   - `publishTemplate` : 메세지 발행 전용 rabbitTemplate
+     - 생성자 주입
+   - `objectMapper` : `Message` 객체의 body에 메세지를 `byte[]`로 넣어주기 위해 사용
+   - `sendMessage()` : 메세지 발행 메서드
+   <details>
+      <summary>`getMessage()` : Message 객체 생성 메서드</summary>
+      - HEADER
+         - destination : 메세지를 발행할 구독 경로
+      - CONTENT_TYPE : `application/ json`
+      - BODY
+         - `byte[]` 형으로 변환한 MessageGetsponse 객체
+             - id : 메세지 ID
+             - type : 메세지 분류
+                 - `CREATE` : 채팅방 생성
+                 - `IN` : 유저 입장
+                 - `OUT` : 유저 퇴장
+                 - `NEW_HOST` : 방장 변경
+                 - `SEND` : 일반 채팅 메세지
+             - roomId : 채팅방 ID
+             - sender : 메세지 발행 유저
+                 - `SEND` 타입 메세지
+                     - id : 메세지 발행 유저 ID
+                     - email : 메세지 발행 유저 email
+                 - 그 외 타입 메세지
+                     - id : 0
+                     - email : `CodeChef`
+             - content : 메세지 내용
+             - createdAt : 메세지 발행 연-월-일 시:분:초
+   </details>
+   - `getChatRoomDestination()` : 채팅 메세지 발행을 위한  웹소켓 전송 구독 경로 Getter
+   - `getInitDestination()` : 채팅방 이전 메세지 불러오기를 위한 웹소켓 전송 구독 경로 Getter
+   
+   ```java
+   @Service
+   public class RabbitMQChatProducer {
+     private final RabbitTemplate publishTemplate;
+     private final ObjectMapper objectMapper = new ObjectMapper();
+   
+     @Autowired
+     public RabbitMQChatProducer(@Qualifier("publishTemplate") RabbitTemplate publishTemplate) {
+         this.publishTemplate = publishTemplate;
+     }
+   
+     public void sendMessage(String exchange, String routingKey, Message message) {
+         publishTemplate.convertAndSend(exchange, routingKey, message);
+     }
+   
+     public Message getMessage(String destination, MessageGetResponse meesageObject) {
+         try {
+             byte[] messageBody = objectMapper.writeValueAsBytes(meesageObject);
+   
+             MessageProperties properties = new MessageProperties();
+             properties.setHeader("destination", destination);
+             properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+   
+             return MessageBuilder.withBody(messageBody)
+                     .andProperties(properties)
+                     .build();
+         } catch (JsonProcessingException e) {
+             throw new ApiException(ErrorStatus.JSON_CHANGE_FAILED);
+         }
+     }
+   
+     public String getChatRoomDestination(Long roomId) {
+         return new StringBuffer()
+                 .append("/")
+                 .append(TOPIC_PREFIX.getKey())
+                 .append("/")
+                 .append(CHAT_ROOM.getKey())
+                 .append("/")
+                 .append(roomId)
+                 .toString();
+     }
+   
+     public String getInitDestination(Long roomId, Long userId) {
+         return new StringBuffer()
+                 .append(this.getChatRoomDestination(roomId))
+                 .append("/")
+                 .append(INIT.getKey())
+                 .append("/")
+                 .append(userId)
+                 .toString();
+     }
+   }
+   ```
+</details>
+
+  <br>
+
+### RabbitMQChatConsumer
+
+> 구독한 메세지를 구독 경로로 웹소켓 전송
+
+<details>
+   <summary>`RabbitMQChatConsumer` 코드</summary>
+   - 구독한 메세지를 웹소켓 전송
+     - Header의 `destination` : 웹소켓으로 발행할 구독 경로
+     - body : 발행할 메세지
+         - String 타입 변환 후 발행
+     
+     ```java
+     @Service
+     @RequiredArgsConstructor
+     public class RabbitMQChatConsumer implements MessageListener {
+     
+         private final SimpMessagingTemplate messagingTemplate;
+     
+         @Override
+         public void onMessage(Message message) {
+             String destination = message.getMessageProperties().getHeader("destination");
+             String payload = new String(message.getBody());
+             messagingTemplate.convertAndSend(destination, payload);
+         }
+     }
+     ```
+</details>
+        
+- **트러블 슈팅**
+    - 💥 [RabbitMQ 메세지 consume 안되는 문제 발생!](https://www.notion.so/RabbitMQ-consume-13ed82ce485680a48104d7abb0377e62?pvs=21)
+    - 💥 [메세지를 발행할 웹소켓 구독 경로 구하기](https://www.notion.so/144d82ce485680e0b619c6ba576e1410?pvs=21)
+
+<br><br>
+</details>
+
+
 <details>
 <summary><b>🍁 실시간 유저 랭킹</b></summary>
 
@@ -2125,7 +3291,7 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 ---
 
-### [의사결정/사유
+### [의사결정/사유]
 
 - **Redis 사용 이유**: Redis는 메모리 기반 저장소로, 데이터 접근 속도가 매우 빠릅니다. 또한, **Sorted Set** 자료 구조를 통해 각 유저 포인트를 기준으로 자동 정렬된 상태를 유지할 수 있어 실시간 랭킹에 최적화된 선택입니다.
 - **RDBMS와의 차이점**: Redis는 Key-Value 형태의 저장소로, 빠른 응답과 다양한 자료 구조(Sorted Set, Hash, List 등)를 제공해 실시간 데이터 조회와 캐싱에 적합합니다. 반면, RDBMS는 관계형 데이터베이스로, 디스크 기반의 저장 방식과 트랜잭션 관리에 최적화되어 있습니다.
