@@ -95,10 +95,9 @@
 
 ## 주요 기능
 
-### 🍁 **랭킹 : ELK 스택을 사용한 실시간 인기 검색어 top10 랭킹 구현**
-- Elasticsearch의 Terms Aggregation을 이용한 인기 검색어 top10 랭킹 구현 
-- 검색 시 Logstash를 통한 실시간 로그 자동 수집 및 Elasticsearch 저장
-- Kibana를 활용한 집계된 인덱스의 시각화
+### 🍁 **검색 : Elasticsearch를 사용한 검색 기능 구현**
+- Elasticsearch를 사용하여 게시글 검색 기능 구현
+
 ### 🍁 ****
 - 
 
