@@ -69,7 +69,59 @@
 ### 아키텍처 다이어그램
 ![Infra Architecture](./service_architecture.png)
 
-위 아키텍처는 **** 구조를 나타냅니다.  
+<details><summary><b>프로젝트 아키텍처 및 CI/CD 워크플로우</b></summary>
+   이 아키텍처는 Spring Boot 애플리케이션을 중심으로 여러 AWS 및 Docker 기반 서비스를 연결하여 구성한 분산 시스템입니다.
+
+---
+아키텍처 설명
+이 프로젝트는 Spring Boot 기반의 마이크로서비스 아키텍처를 사용하며, 아래와 같은 구성 요소로 이루어져 있습니다:
+
+### Spring Boot 애플리케이션
+
+Docker 이미지를 기반으로 배포.
+외부 서비스와 통신:
+Amazon RDS: 데이터 저장소로 사용.
+---
+### 외부 서비스와 통신
+**&middot; Elasticsearch**: 검색 및 로그 처리.</br>
+**&middot; RabbitMQ**: 메시지 브로커.</br>
+**&middot; Redis**: 캐싱 및 세션 관리.</br>
+**&middot; Amazon S3**: 정적 파일 저장소.CloudFront를 통해 S3 파일을 빠르고 안전하게 제공.</br>
+
+**Docker를 통한 서비스 분리 각 서비스는 별도의 EC2 인스턴스에서 Docker 컨테이너로 실행됩니다.**
+
+Redis는 마스터-슬레이브 및 Sentinel 구성을 포함.</br>
+Elasticsearch와 RabbitMQ도 Docker 컨테이너로 배포.</br>
+
+CloudFront: Amazon S3에서 제공되는 정적 파일을 배포.</br>
+EC2: 각 컨테이너 기반 서비스가 실행되는 인프라.</br>
+RDS: 관계형 데이터베이스 서비스.</br>
+---
+### **CI/CD 파이프라인**</br>
+
+GitHub Actions
+소스 코드는 GitHub에 저장.</br>
+GitHub Actions를 통해 빌드 및 테스트 자동화:</br>
+Spring Boot 애플리케이션의 JAR 파일 생성.</br>
+Docker 이미지 빌드 및 테스트.</br>
+
+Docker Hub</br>
+빌드된 Docker 이미지는 Docker Hub에 푸시.</br>
+배포 단계에서 각 EC2 인스턴스에서 이미지를 Pull하여 컨테이너 실행.</br>
+EC2 인스턴스에서 Docker Compose로 각 서비스 배포.
+애플리케이션 컨테이너가 RDS, Elasticsearch, Redis,· RabbitMQ 등과 통신.
+
+---
+### 워크플로우 다이어그램
+1. **CI/CD 파이프라인**</br>
+   GitHub에 소스 코드 푸시 ➡️ GitHub Actions가 JAR 파일 빌드 및 Docker 이미지 생성 ➡️ Docker Hub에 Push
+   배포 시 EC2 인스턴스에서 Docker Hub로부터 이미지 Pull
+2. **아키텍처**</br>
+   Spring Boot 애플리케이션은 Redis, RabbitMQ, Elasticsearch, RDS, S3와 통신.
+   정적 파일은 Amazon CloudFront와 S3를 통해 제공.
+</details>
+
+---
 
 
 <details>
