@@ -96,6 +96,7 @@ Elasticsearch와 RabbitMQ도 Docker 컨테이너로 배포.</br>
 CloudFront: Amazon S3에서 제공되는 정적 파일을 배포.</br>
 EC2: 각 컨테이너 기반 서비스가 실행되는 인프라.</br>
 RDS: 관계형 데이터베이스 서비스.</br>
+
 ---
 ### **CI/CD 파이프라인**</br>
 
@@ -112,6 +113,7 @@ EC2 인스턴스에서 Docker Compose로 각 서비스 배포.
 애플리케이션 컨테이너가 RDS, Elasticsearch, Redis,· RabbitMQ 등과 통신.
 
 ---
+
 ### 워크플로우 다이어그램
 1. **CI/CD 파이프라인**</br>
    GitHub에 소스 코드 푸시 ➡️ GitHub Actions가 JAR 파일 빌드 및 Docker 이미지 생성 ➡️ Docker Hub에 Push
