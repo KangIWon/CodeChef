@@ -956,307 +956,329 @@ Redis 분산 락은 데이터 충돌을 방지하고 빠른 성능을 제공하�
    
 # 🥏 기술적 의사 결정
 
-[왜 Amazon S3, CloudFront를 사용했나요?](https://www.notion.so/Amazon-S3-CloudFront-135d82ce485680b9b1b6cc0a613253f2?pvs=21) 
+❓ [왜 Amazon S3, CloudFront를 사용했나요?](https://www.notion.so/Amazon-S3-CloudFront-135d82ce485680b9b1b6cc0a613253f2?pvs=21) 
+
+<br>
 
 # 🌱 구현하기
 
-> [첨부파일 업로드 기능 구현시 고려 사항](https://www.notion.so/13fd82ce48568040a36fdf531adc910a?pvs=21)
-> 
+> ✅ [첨부파일 업로드 기능 구현시 고려 사항](https://www.notion.so/13fd82ce48568040a36fdf531adc910a?pvs=21)
+
+<br>
 
 ## 첨부파일 저장
 
 > `/api/boards/{boardId}/attachments`
-> 
-- `@AuthForBoard` : 관리자 혹은 게시물 작성장 권한 필요
-([요청별 권한 체크 어노테이션 구현](https://www.notion.so/131d82ce4856802cb43bfefe83db43f8?pvs=21))
+
+- `@AuthForBoard` : 관리자 혹은 게시물 작성장 권한 필요<br>
+   (🍀 [요청별 권한 체크 어노테이션 구현](https://www.notion.so/131d82ce4856802cb43bfefe83db43f8?pvs=21))
 - `POST` 요청
-- Controller 코드
+  
+<details>
+   <summary>Controller 코드</summary>
+
+   ```java
+   /**
+   * 첨부파일 저장
+   * @param boardId : 게시물 ID
+   * @param fileList : 저장할 첨부파일 리스트
+   * @return 상태 코드, 상태 메세지, 첨부파일 정보(파일 이름, URL)
+   */
+   @AuthForBoard
+   @PostMapping
+   public ApiResponse<List<AttachmentResponse>> uploadFiles(
+         @PathVariable Long boardId,
+         @RequestPart(name = "fileList") List<MultipartFile> fileList
+   ) {
+     return ApiResponse.ok(
+             "첨부파일이 추가되었습니다.",
+             this.attachmentService.uploadFiles(boardId, fileList)
+     );
+   }
+   ```
+   
+</details>
     
-    ```java
-    /**
-     * 첨부파일 저장
-     * @param boardId : 게시물 ID
-     * @param fileList : 저장할 첨부파일 리스트
-     * @return 상태 코드, 상태 메세지, 첨부파일 정보(파일 이름, URL)
-     */
-    @AuthForBoard
-    @PostMapping
-    public ApiResponse<List<AttachmentResponse>> uploadFiles(
-            @PathVariable Long boardId,
-            @RequestPart(name = "fileList") List<MultipartFile> fileList
-    ) {
-        return ApiResponse.ok(
-                "첨부파일이 추가되었습니다.",
-                this.attachmentService.uploadFiles(boardId, fileList)
-        );
-    }
-    ```
-    
-- Service 코드
-    - 첨부 파일 저장 시, 기존에 저장된 파일을 모두 삭제 후, 저장하는 방식
-        - 게시글 등록 시, 전체 첨부파일이 업로드 된다는 가정
-        - 단건 업로드나 편집되는 경우가 없다고 판단
-    - S3 Bucket에 첨부파일 업로드 후, DB에 S3Key와 CDNURL 정보가 담긴 Attachment 엔티티를 저장
-    
-    ```java
-    private final List<String> ALLOWED_MIME_TYPES = List.of("image/jpeg", "image/png");
-    private final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png");
-    
-    private final Long MAX_FILE_SIZE = 5 * 1024 * 1024L;  // 단일 파일 최대 용량 : 5MB
-    private final Long MAX_REQUEST_SIZE = 10 * 1024 * 1024L;  // 전체 업로드 파일 최대 용량 : 10MB
-    
-    /**
-     * 첨부파일 추가
-     * @param boardId : 게시글 ID
-     * @param fileList : 첨부파일 리스트
-     * @return 첨부파일 정보 리스트 (파일명, URL)
-     */
-    public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
-        this.validateAttachmentFiles(fileList);
-        this.deleteFiles(boardId);
-    
-        Board board = this.boardRepository.findById(boardId).orElseThrow(
-                () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
-        );
-    
-        return fileList.stream().map(file -> this.uploadFile(board, file)).toList();
-    }
-    
-    /**
-     * 첨부파일 리스트 유효성 검증
-     *  - 첨부파일 존재
-     *  - 총 첨부파일 크기 : 최대 10MB 허용
-     *  - 첨부파일 이름 고유성 체크
-     * @param fileList : 첨부파일 리스트
-     */
-    private void validateAttachmentFiles(List<MultipartFile> fileList) {
-        if (fileList.isEmpty()) {
-            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
-        }
-    
-        long totalSize = fileList.stream().filter(this::validateFile).mapToLong(MultipartFile::getSize).sum();
-        if (totalSize == 0) {
-            throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
-        }
-    
-        if (totalSize > MAX_REQUEST_SIZE) {
-            throw new ApiException(ErrorStatus.MAX_UPLOAD_REQUEST_SIZE_EXCEEDED);
-        }
-    
-        long distinctFileNames = fileList.stream().map(MultipartFile::getOriginalFilename).distinct().count();
-    
-        if (distinctFileNames != fileList.size()) {
-            throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
-        }
-    }
-    
-    /**
-     * 단일 첨부파일 유효성 검증
-     *  - Mime Type 확인 : "image/jpeg", "image/png" 만 허용
-     *  - 개별 파일 사이즈 확인 : 최대 5MB까지 허용
-     *  - 확장자 확인 : "jpg", "jpeg", "png"만 허용
-     *  - 파일명 확인 : NOT_NULL, NOT_BLANK, 25자 이하
-     * @param file : 첨부 파일
-     * @return true : 유효한 첨부파일  else false
-     */
-    private boolean validateFile(MultipartFile file) {
-        if (file == null) {
-            throw new ApiException(ErrorStatus.FILE_IS_NULL);
-        }
-    
-        // Mime Type 확인
-        String mimeType = file.getContentType();
-        if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
-            throw new ApiException(ErrorStatus.INVALID_MIME_TYPE);
-        }
-    
-        // 개별 파일 사이즈 확인
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
-        }
-    
-        String fileName = file.getOriginalFilename();
-    
-        // 확장자 확인
-        String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new ApiException(ErrorStatus.INVALID_EXTENSION);
-        }
-    
-        if (fileName == null) {
-            throw new ApiException(ErrorStatus.FILE_NAME_IS_NULL);
-        }
-    
-        if (fileName.isBlank()) {
-            throw new ApiException(ErrorStatus.FILE_NAME_IS_EMPTY);
-        }
-    
-        if (fileName.length() > 25) {
-            throw new ApiException(ErrorStatus.FILE_NAME_IS_TOO_LONG);
-        }
-    
-        return true;
-    }
-    
-    /**
-     * 게시글 첨부파일 전체 삭제
-     * @param boardId : 게시글 ID
-     */
-    public void deleteFiles(Long boardId) {
-        this.attachmentRepository.findAllByBoardId(boardId)
-                .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
-    
-        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
-    }
-    
-    /**
-     * 단일 첨부파일 업로드
-     *  - S3 Bucket에 첨부파일 업로드 후, S3Key와 CDNURL을 DB에 저장
-     * @param board : 게시글 엔티티
-     * @param file : 첨부파일
-     * @return 첨부파일 정보(파일명, cloudFrontFileURL)
-     */
-    public AttachmentResponse uploadFile(Board board, MultipartFile file) {
-        String s3Key = this.getS3Key(board.getId(), file.getOriginalFilename());
-    
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(file.getSize());
-        metadata.setContentType(file.getContentType());
-    
-        try {
-            amazonS3.putObject(S3_BUCKET, s3Key, file.getInputStream(), metadata);
-    
-        } catch (IOException e) {
-            throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
-        }
-    
-        Attachment attachment = Attachment.builder()
-                .board(board)
-                .s3Key(s3Key)
-                .cdnUrl(this.getCdnUrl(s3Key))
-                .build();
-    
-        Attachment savedAttachment = this.attachmentRepository.save(attachment);
-    
-        return new AttachmentResponse(savedAttachment);
-    }
-    ```
-    
+<details>
+   <summary>Service 코드</summary>
+   - 첨부 파일 저장 시, 기존에 저장된 파일을 모두 삭제 후, 저장하는 방식<br>
+     - 게시글 등록 시, 전체 첨부파일이 업로드 된다는 가정<br>
+     - 단건 업로드나 편집되는 경우가 없다고 판단<br>
+   - S3 Bucket에 첨부파일 업로드 후, DB에 S3Key와 CDNURL 정보가 담긴 Attachment 엔티티를 저장<br><br>
+
+   ```java
+   private final List<String> ALLOWED_MIME_TYPES = List.of("image/jpeg", "image/png");
+   private final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png");
+   
+   private final Long MAX_FILE_SIZE = 5 * 1024 * 1024L;  // 단일 파일 최대 용량 : 5MB
+   private final Long MAX_REQUEST_SIZE = 10 * 1024 * 1024L;  // 전체 업로드 파일 최대 용량 : 10MB
+   
+   /**
+   * 첨부파일 추가
+   * @param boardId : 게시글 ID
+   * @param fileList : 첨부파일 리스트
+   * @return 첨부파일 정보 리스트 (파일명, URL)
+   */
+   public List<AttachmentResponse> uploadFiles(Long boardId, List<MultipartFile> fileList) {
+     this.validateAttachmentFiles(fileList);
+     this.deleteFiles(boardId);
+   
+     Board board = this.boardRepository.findById(boardId).orElseThrow(
+             () -> new ApiException(ErrorStatus.NOT_FOUND_BOARD)
+     );
+   
+     return fileList.stream().map(file -> this.uploadFile(board, file)).toList();
+   }
+   
+   /**
+   * 첨부파일 리스트 유효성 검증
+   *  - 첨부파일 존재
+   *  - 총 첨부파일 크기 : 최대 10MB 허용
+   *  - 첨부파일 이름 고유성 체크
+   * @param fileList : 첨부파일 리스트
+   */
+   private void validateAttachmentFiles(List<MultipartFile> fileList) {
+     if (fileList.isEmpty()) {
+         throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+     }
+   
+     long totalSize = fileList.stream().filter(this::validateFile).mapToLong(MultipartFile::getSize).sum();
+     if (totalSize == 0) {
+         throw new ApiException(ErrorStatus.EMPTY_ATTACHMENT_LIST);
+     }
+   
+     if (totalSize > MAX_REQUEST_SIZE) {
+         throw new ApiException(ErrorStatus.MAX_UPLOAD_REQUEST_SIZE_EXCEEDED);
+     }
+   
+     long distinctFileNames = fileList.stream().map(MultipartFile::getOriginalFilename).distinct().count();
+   
+     if (distinctFileNames != fileList.size()) {
+         throw new ApiException(ErrorStatus.NOT_UNIQUE_FILENAME);
+     }
+   }
+   
+   /**
+   * 단일 첨부파일 유효성 검증
+   *  - Mime Type 확인 : "image/jpeg", "image/png" 만 허용
+   *  - 개별 파일 사이즈 확인 : 최대 5MB까지 허용
+   *  - 확장자 확인 : "jpg", "jpeg", "png"만 허용
+   *  - 파일명 확인 : NOT_NULL, NOT_BLANK, 25자 이하
+   * @param file : 첨부 파일
+   * @return true : 유효한 첨부파일  else false
+   */
+   private boolean validateFile(MultipartFile file) {
+     if (file == null) {
+         throw new ApiException(ErrorStatus.FILE_IS_NULL);
+     }
+   
+     // Mime Type 확인
+     String mimeType = file.getContentType();
+     if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
+         throw new ApiException(ErrorStatus.INVALID_MIME_TYPE);
+     }
+   
+     // 개별 파일 사이즈 확인
+     if (file.getSize() > MAX_FILE_SIZE) {
+         throw new ApiException(ErrorStatus.MAX_UPLOAD_FILE_SIZE_EXCEEDED);
+     }
+   
+     String fileName = file.getOriginalFilename();
+   
+     // 확장자 확인
+     String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+     if (!ALLOWED_EXTENSIONS.contains(extension)) {
+         throw new ApiException(ErrorStatus.INVALID_EXTENSION);
+     }
+   
+     if (fileName == null) {
+         throw new ApiException(ErrorStatus.FILE_NAME_IS_NULL);
+     }
+   
+     if (fileName.isBlank()) {
+         throw new ApiException(ErrorStatus.FILE_NAME_IS_EMPTY);
+     }
+   
+     if (fileName.length() > 25) {
+         throw new ApiException(ErrorStatus.FILE_NAME_IS_TOO_LONG);
+     }
+   
+     return true;
+   }
+   
+   /**
+   * 게시글 첨부파일 전체 삭제
+   * @param boardId : 게시글 ID
+   */
+   public void deleteFiles(Long boardId) {
+     this.attachmentRepository.findAllByBoardId(boardId)
+             .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
+   
+     this.getKeyListFromS3(boardId).forEach(this::deleteFile);
+   }
+   
+   /**
+   * 단일 첨부파일 업로드
+   *  - S3 Bucket에 첨부파일 업로드 후, S3Key와 CDNURL을 DB에 저장
+   * @param board : 게시글 엔티티
+   * @param file : 첨부파일
+   * @return 첨부파일 정보(파일명, cloudFrontFileURL)
+   */
+   public AttachmentResponse uploadFile(Board board, MultipartFile file) {
+     String s3Key = this.getS3Key(board.getId(), file.getOriginalFilename());
+   
+     ObjectMetadata metadata = new ObjectMetadata();
+     metadata.setContentLength(file.getSize());
+     metadata.setContentType(file.getContentType());
+   
+     try {
+         amazonS3.putObject(S3_BUCKET, s3Key, file.getInputStream(), metadata);
+   
+     } catch (IOException e) {
+         throw new ApiException(ErrorStatus.FAILED_TO_UPLOAD_ATTACHMENT);
+     }
+   
+     Attachment attachment = Attachment.builder()
+             .board(board)
+             .s3Key(s3Key)
+             .cdnUrl(this.getCdnUrl(s3Key))
+             .build();
+   
+     Attachment savedAttachment = this.attachmentRepository.save(attachment);
+   
+     return new AttachmentResponse(savedAttachment);
+   }
+   ```
+
+</details>
 
 ## 첨부파일 다건 조회
 
 > `/api/boards/{boardId}/attachments`
-> 
+
 - `GET` 요청
-- Controller 코드
+  
+<details>
+   <summary>Controller 코드</summary>
+
+   ```java
+   /**
+   * 첨부파일 다건 조회 by 게시물 ID
+   *
+   * @param boardId : 게시글 ID
+   * @return 상태 코드, 상태 메세지, 첨부파일 정보 리스트
+   */
+   @GetMapping
+   public ApiResponse<List<AttachmentResponse>> getFiles(@PathVariable Long boardId) {
+     return ApiResponse.ok(
+             "첨부파일 목록 전체가 조회되었습니다.",
+             this.attachmentService.getFiles(boardId)
+     );
+   }
+   ```
+   
+</details>
     
-    ```java
-    /**
-     * 첨부파일 다건 조회 by 게시물 ID
-     *
-     * @param boardId : 게시글 ID
-     * @return 상태 코드, 상태 메세지, 첨부파일 정보 리스트
-     */
-    @GetMapping
-    public ApiResponse<List<AttachmentResponse>> getFiles(@PathVariable Long boardId) {
-        return ApiResponse.ok(
-                "첨부파일 목록 전체가 조회되었습니다.",
-                this.attachmentService.getFiles(boardId)
-        );
-    }
-    ```
+<details>
+   <summary>Service 코드</summary>
+   <blockquote>
+      DB에서 boardId로 첨부파일 리스트 조회<br>
+      Attachment 객체를 AttachmentResponse 객체로 변환하여 반환
+   </blockquote>
     
-- Service 코드
-    
-    > DB에서 boardId로 첨부파일 리스트 조회
-    Attachment 객체를 AttachmentResponse 객체로 변환하여 반환
-    > 
-    
-    ```java
-    /**
-     * 게시글에 첨부된 첨부파일 조회
-     * @param boardId : 게시글 ID
-     * @return 첨부파일 정보 리스트(파일명, cloudFrontFileURL)
-     */
-    public List<AttachmentResponse> getFiles(Long boardId) {
-        boolean isPresentBoard = this.boardRepository.existsById(boardId);
-    
-        if (!isPresentBoard) {
-            throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
-        };
-    
-        List<Attachment> attachmentList = this.attachmentRepository.findAllByBoardId(boardId);
-    
-        if (attachmentList != null && !attachmentList.isEmpty()) {
-            return attachmentList.stream().map(attachment ->
-                new AttachmentResponse(attachment.getId(), attachment.getS3Key(), attachment.getCdnUrl())
-            ).toList();
-        }
-    
-        return new ArrayList<>();
-    }
-    ```
+   ```java
+   /**
+   * 게시글에 첨부된 첨부파일 조회
+   * @param boardId : 게시글 ID
+   * @return 첨부파일 정보 리스트(파일명, cloudFrontFileURL)
+   */
+   public List<AttachmentResponse> getFiles(Long boardId) {
+     boolean isPresentBoard = this.boardRepository.existsById(boardId);
+   
+     if (!isPresentBoard) {
+         throw new ApiException(ErrorStatus.NOT_FOUND_BOARD);
+     };
+   
+     List<Attachment> attachmentList = this.attachmentRepository.findAllByBoardId(boardId);
+   
+     if (attachmentList != null && !attachmentList.isEmpty()) {
+         return attachmentList.stream().map(attachment ->
+             new AttachmentResponse(attachment.getId(), attachment.getS3Key(), attachment.getCdnUrl())
+         ).toList();
+     }
+   
+     return new ArrayList<>();
+   }
+   ```
+
+</details>
     
 
 ## 게시물 전체 첨부파일 삭제
 
 > `/api/boards/{boardId}/attachments`
-> 
+
 - `@AuthForBoard` : 관리자 혹은 게시물 작성자 권한 필요
 - `DELETE` 요청
-- Controller 코드
+  
+<details>
+   <summary>Controller 코드</summary>
+
+   ```java
+   /**
+   * 게시물 전체 첨부파일 삭제
+   * @param boardId
+   * @return
+   */
+   @AuthForBoard
+   @DeleteMapping
+   public ApiResponse<Void> deleteFiles(@PathVariable Long boardId) {
+     this.attachmentService.deleteFiles(boardId);
+   
+     return ApiResponse.ok("게시물의 첨부파일이 전부 삭제되었습니다.", null);
+   }
+   ```
+
+</details>
     
-    ```java
-    /**
-     * 게시물 전체 첨부파일 삭제
-     * @param boardId
-     * @return
-     */
-    @AuthForBoard
-    @DeleteMapping
-    public ApiResponse<Void> deleteFiles(@PathVariable Long boardId) {
-        this.attachmentService.deleteFiles(boardId);
-    
-        return ApiResponse.ok("게시물의 첨부파일이 전부 삭제되었습니다.", null);
-    }
-    ```
-    
-- Service 코드
-    
-    ```java
-    /**
-     * 게시글 첨부파일 전체 삭제
-     * @param boardId : 게시글 ID
-     */
-    public void deleteFiles(Long boardId) {
-        this.attachmentRepository.findAllByBoardId(boardId)
-                .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
-    
-        this.getKeyListFromS3(boardId).forEach(this::deleteFile);
-    }
-    
-    /**
-     * 단일 첨부 파일 삭제
-     * @param key : 첨부 파일
-     */
-    public void deleteFile(String key) {
-        try {
-            amazonS3.deleteObject(S3_BUCKET, key);
-        } catch (Exception e) {
-            throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
-        }
-    }
-    ```
-    
+<details>
+   <summary>Service 코드</summary>
+
+   ```java
+   /**
+   * 게시글 첨부파일 전체 삭제
+   * @param boardId : 게시글 ID
+   */
+   public void deleteFiles(Long boardId) {
+     this.attachmentRepository.findAllByBoardId(boardId)
+             .forEach(attachment -> this.attachmentRepository.deleteById(attachment.getId()));
+   
+     this.getKeyListFromS3(boardId).forEach(this::deleteFile);
+   }
+   
+   /**
+   * 단일 첨부 파일 삭제
+   * @param key : 첨부 파일
+   */
+   public void deleteFile(String key) {
+     try {
+         amazonS3.deleteObject(S3_BUCKET, key);
+     } catch (Exception e) {
+         throw new ApiException(ErrorStatus.FAILED_TO_DELETE_ATTACHMENT);
+     }
+   }
+   ```
+
+</details>
 
 # 💥 트러블 슈팅
 
-[S3 첨부파일 조회시, 링크 클릭하면 Access Denied 되는 문제](https://www.notion.so/S3-Access-Denied-131d82ce48568116932cfbc3d3c00ea7?pvs=21) 
+- [S3 첨부파일 조회시, 링크 클릭하면 Access Denied 되는 문제](https://www.notion.so/S3-Access-Denied-131d82ce48568116932cfbc3d3c00ea7?pvs=21) 
 
-추가적으로 더 첨부파일 업로드 기능을 구현한다면,
+<br><br>
 
-캐시 무효화를 통해 콘텐츠가 업데이트될 때, 즉시 갱신할 수 있는 캐시 무효화 전략을 사용해 보고 싶습니다.
-
+추가적으로 더 첨부파일 업로드 기능을 구현한다면,<br>
+캐시 무효화를 통해 콘텐츠가 업데이트될 때, 즉시 갱신할 수 있는 캐시 무효화 전략을 사용해 보고 싶습니다.<br>
 Spring에서 CDN 캐시 무효화는 CDN API와 HTTP 요청 라이브러리(`CloudFrontClient`)를 활용하여 구현 가능합니다.
 
    <br>
@@ -1266,9 +1288,10 @@ Spring에서 CDN 캐시 무효화는 CDN API와 HTTP 요청 라이브러리(`Clo
 <a href="https://youtu.be/R3YE9Xfa2MQ?si=O2-BHj2h75QErtZL" target="_blank">
  <img src="https://github.com/user-attachments/assets/3b826e1e-c8dd-426f-96d8-17c18d83ffb7" alt="게시글 파일 첨부 기능 시연 영상" style="width:300px; height:auto; margin:20px;">
 </a>
+
+   <br>
    
 </details>
-
 <details>
 <summary><b>🍁 알람 기능 구현 1 (Redis Pub/Sub)</b></summary>
 
