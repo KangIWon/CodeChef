@@ -182,6 +182,106 @@ type = range로 boardSearch 쿼리 인덱싱 적용 완료 확인
 </details>
 ---
 
+<details>
+<summary><b>🍁 배포 ci/cd</b></summary>
+### [내가 구현한 기능]
+
+### CICD
+
+---
+
+### [주요 로직]
+
+**GitHub Actions 시나리오**
+
+개발자가 `main` 브랜치에 푸시하면, GitHub Actions 워크플로우가 자동 실행된다. 해당 워크플로우는 다음 단계를 포함한다.
+
+1. **리포지토리 체크아웃**
+    - `actions/checkout@v4`를 통해 애플리케이션 코드 리포지토리를 체크아웃한다.
+2. **EC2 SSH 설정**
+    - EC2 연결에 필요한 `EC2_HOST`, `EC2_USER`, `SSH_PRIVATE_KEY` 환경 변수를 사용해 SSH 설정을 구성한다.
+    - `SSH_PRIVATE_KEY`를 파일로 저장해 SSH 접근 권한을 설정한다.
+3. **자바 환경 구성**
+    - `actions/setup-java@v4`를 사용해 자바 17 환경을 설치하고, Gradle 빌드를 위한 설정을 마친다.
+4. **Gradle 빌드**
+    - `gradlew` 파일에 실행 권한을 부여하고, `./gradlew build` 명령어로 프로젝트를 Gradle 빌드해 애플리케이션 JAR 파일을 생성한다.
+5. **Docker 이미지 빌드 및 DockerHub 푸시**
+    - `docker/login-action@v1`를 통해 DockerHub에 로그인한 후, Docker 이미지를 `DOCKER_USERNAME`/`my-app:latest` 이름으로 빌드하여 DockerHub에 푸시한다.
+6. **EC2 서버에 SSH 접속 후 배포**
+    - `appleboy/ssh-action@v1.1.0`을 사용해 EC2 서버에 SSH 접속한 후, 다음과 같은 배포 과정을 진행한다:
+        - DockerHub에 로그인 후, 기존 애플리케이션 컨테이너를 중지하고, 사용하지 않는 컨테이너 및 이미지를 정리해 공간을 확보한다.
+        - DockerHub에서 최신 애플리케이션 이미지를 `pull`한 후, 환경 변수 설정 파일 `.env`를 적용해 포트 8080에서 애플리케이션 컨테이너를 실행한다.
+
+---
+
+이를 통해 EC2 서버에서 최신 애플리케이션 상태가 유지될 수 있도록 하며, 자동화된 배포 과정을 완성한다.
+
+---
+
+### [배경]
+
+기존 수동 배포 과정은 속도 저하와 반복 작업으로 인한 비효율성을 초래했다. 자동화된 CI/CD 프로세스를 도입해 배포를 최적화할 필요가 있었다.
+
+---
+
+### [요구사항]
+
+1. CI/CD 파이프라인 자동화
+2. EC2 서버와의 안전한 통신 및 배포 설정
+3. Docker Hub와의 간편한 연계 및 이미지 관리
+
+---
+
+### [선택지]
+
+1. Jenkins
+2. GitHub Actions
+
+---
+
+### [의사결정/사유]
+
+**배경**
+
+당시 EC2 프리 티어 인스턴스를 사용 중이며, 메모리는 1GB이다. Docker와 Jenkins를 동시에 구동하려 했으나 성능이 크게 저하되는 문제가 발생했다. Jenkins는 일반적으로 2GB 이상의 메모리를 요구하고 Docker로 구동할 때에도 메모리 여유가 필요해, 현재 인스턴스로는 Docker와 Jenkins를 함께 운영하기 어려웠다. 결과적으로 최소 4GB 이상의 메모리가 필요할 것으로 보였다.
+
+**문제 해결**
+
+EC2 인스턴스를 업그레이드하거나, Jenkins를 로컬에서 구동하는 방안을 검토했으나 Jenkins 대신 **GitHub Actions**를 사용하기로 결정했다. 이는 Jenkins의 설정 부담을 줄이고 EC2 환경에서 CI/CD를 효과적으로 구현할 수 있는 대안으로 판단했다.
+
+**성과**
+
+GitHub Actions를 통해 CI/CD 파이프라인을 자동화하며 수동 배포 과정을 효율적으로 개선했다. 배포 속도가 크게 단축되었고 인적 오류가 줄어들어 전체적인 개발 생산성이 높아졌다.
+
+---
+
+### [회고]
+
+### 1. **Jenkins 대신 GitHub Actions 사용의 이점**
+
+GitHub Actions는 Jenkins와 비교해 다음과 같은 장점을 지닌다:
+
+- **간편한 통합**: GitHub Actions는 GitHub 리포지토리와 바로 연결되어 추가 설정 없이 CI/CD 파이프라인을 쉽게 구성할 수 있다. Jenkins는 GitHub 통합을 위해 웹훅이나 플러그인 설정이 필요하다.
+- **비용 절감**: GitHub Actions는 퍼블릭 리포지토리에서 무료로 제공되며, 기본 요금제에도 일정량의 워크플로우 사용이 포함되어 비용 절감에 효과적이다. Jenkins는 서버 운영과 클라우드 사용에 따른 추가 비용이 발생할 수 있다.
+- **관리 편의성과 유연한 스케일링**: GitHub Actions는 서버리스로 제공되며 추가 서버 관리가 필요 없고, Jenkins와 달리 확장 시 별도 서버 관리가 필요 없다.
+- **YAML 기반 구성**: 설정 파일이 `.yml` 형식으로 기록되어 버전 관리와 코드 리뷰가 용이해 협업에 유리하다.
+- **병렬 실행 지원**: GitHub Actions는 다양한 작업을 병렬로 쉽게 실행할 수 있으며, 자체 호스팅 러너로 특정 작업을 분산 처리할 수 있다. Jenkins도 병렬 빌드를 지원하지만, 설정이 더 복잡하다.
+
+### 2. **GitHub Actions 사용 시 Docker Hub의 장점**
+
+Docker 이미지를 저장할 레지스트리로 Docker Hub를 선택하는 경우, AWS ECR과 비교해 다음과 같은 장점이 있다:
+
+- **사용성과 접근성**: Docker Hub는 Docker 커뮤니티의 기본 레지스트리로 널리 사용되며, 퍼블릭 이미지의 배포와 접근이 용이하다.
+- **간편한 설정**: Docker Hub는 GitHub Actions와 쉽게 연동되며 간단한 인증으로 설정할 수 있다. AWS ECR을 사용하려면 IAM 역할 및 정책 설정 같은 추가 작업이 필요하다.
+- **공개 이미지 관리 편리성**: 오픈 소스 프로젝트나 외부에 Docker 이미지를 배포할 경우 Docker Hub가 더 유리하다.
+- **환경 독립성**: Docker Hub는 다양한 클라우드 환경과 온프레미스에서도 쉽게 사용할 수 있어, ECR보다 환경 독립성이 높다.
+
+---
+
+위와 같은 이유로 EC2 프리 티어 환경에서는 Jenkins 대신 GitHub Actions와 Docker Hub를 사용해 CI/CD 파이프라인을 구성하는 것이 효율적인 대안이라 판단했다.
+<img width="817" alt="스크린샷 2024-11-14 오전 10 13 52" src="https://github.com/user-attachments/assets/8d51c968-96ed-44b5-9487-f4b43b992070">
+</details>
+
 ## 역할 분담 및 협업 방식
 
 ### **Detail Role**
