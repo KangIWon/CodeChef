@@ -27,7 +27,9 @@
    - 정교한 검색 기능을 제공
   
 **결론:** Elasticsearch를 도입하여 성능 및 검색 기능 확장성 개선했습니다.
-![성능 그래프](assets/images/elasticsearch/ES_vs_index.png)
+
+![성능 그래프](assets/images/elasticsearch/ES _vs_Index.png)
+
 
 
 ---
