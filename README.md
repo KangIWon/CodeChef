@@ -447,9 +447,11 @@ Docker 이미지를 저장할 레지스트리로 Docker Hub를 선택하는 경�
 <details>
 <summary><b>🍁 게시글 조회 동시성 2 (낙관적 락)</b></summary>
 낙관적 락 실행
+   
 <img width="836" alt="스크린샷 2024-11-05 오후 9 14 38" src="https://github.com/user-attachments/assets/5f7a7e3d-2b8f-42ed-aa7c-0ef5db458cd5">
 
 비관적 락 실행
+
 <img width="836" alt="스크린샷 2024-11-05 오후 9 17 12" src="https://github.com/user-attachments/assets/aa919d21-0f4b-4efc-9e9f-b0c7472cbec6">
 
 first test가 비관적 락, second test가 낙관적 락
