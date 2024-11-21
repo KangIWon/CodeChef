@@ -1470,6 +1470,10 @@ https://www.youtube.com/watch?v=VyB2csyjwcc
 <details>
 <summary><b>🍁 실시간 유저 랭킹</b></summary>
 
+실시간 유저  랭킹 조회 DB에서의 조회와 Redis를 캐싱(Cacheable 사용)한 것에서의 조회
+
+![image (1)](https://github.com/user-attachments/assets/9ca7caf2-24e5-4156-9bfe-0c668e9b172c)
+
 ### [내가 구현한 기능]
 
 포인트에 따른 실시간 유저 랭킹
