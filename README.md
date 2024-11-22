@@ -84,9 +84,6 @@
    이 아키텍처는 Spring Boot 애플리케이션을 중심으로 여러 AWS 및 Docker 기반 서비스를 연결하여 구성한 분산 시스템입니다.
 
 ---
-아키텍처 설명
-이 프로젝트는 Spring Boot 기반의 마이크로서비스 아키텍처를 사용하며, 아래와 같은 구성 요소로 이루어져 있습니다:
-
 ### Spring Boot 애플리케이션
 
 Docker 이미지를 기반으로 배포.
@@ -135,26 +132,6 @@ EC2 인스턴스에서 Docker Compose로 각 서비스 배포.
 </details>
 
 ---
-
-
-<details>
-<summary><b>📦 적용 기술 상세보기</b></summary>
-
-### 💾 ****
-- **Redis**  
-  - 
-
-### 📬 **메시징 시스템**
-- **RabbitMQ**
-  - 
-
-### 🌐 **인프라 및 배포**
-- **Docker**  
-  - 
-- **Prometheus & Grafana**  
-  - 
-
-</details>
 
 
 
